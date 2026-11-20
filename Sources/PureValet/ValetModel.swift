@@ -152,12 +152,16 @@ final class ValetModel {
 
     // MARK: - Detection
 
+    /// `valet install` symlinks Valet into Homebrew's `bin`, and `valet trust` only whitelists that path
+    /// in sudoers (Valet re-runs itself with sudo using the path it was called with). So the Homebrew
+    /// symlink comes first; the Composer paths are fallbacks for a not-yet-installed Valet.
     private static func locateValet() -> String? {
         let candidates = [
-            "\(home)/.composer/vendor/bin/valet",
-            "\(home)/.config/composer/vendor/bin/valet",
+            "\(Shell.brewPrefix)/bin/valet",
             "/opt/homebrew/bin/valet",
             "/usr/local/bin/valet",
+            "\(home)/.composer/vendor/bin/valet",
+            "\(home)/.config/composer/vendor/bin/valet",
         ]
         return candidates.first { FileManager.default.isExecutableFile(atPath: $0) }
     }

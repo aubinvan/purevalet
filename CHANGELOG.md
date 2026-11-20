@@ -3,6 +3,11 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.5.2] - 2026-11-20
+
+### Fixed
+- PureValet now calls Valet through Homebrew's `bin/valet` symlink (created by `valet install`). `valet trust` only whitelists that path, so calling the Composer path still asked for a password after `valet trust`.
+
 ## [0.5.1] - 2026-11-20
 
 ### Fixed
