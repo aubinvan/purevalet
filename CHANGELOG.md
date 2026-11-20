@@ -5,6 +5,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-11-20
+
+### Fixed
+- The one-time no-admin setup now also removes Valet's root services named `sh.brew.*` (Homebrew 5+), not only `homebrew.mxcl.*`. A root dnsmasq was restarted at every boot and kept the "Finish setup" message visible.
+
 ## [0.9.0] - 2026-11-20
 
 ### Added

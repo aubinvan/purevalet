@@ -284,8 +284,11 @@ enum RootlessSetup {
         "php-fpm: master process (\(Shell.brewPrefix)/etc/php/",
     ]
 
+    /// Root launchd services of Valet's formulae, under both Homebrew naming schemes
+    /// (`homebrew.mxcl.*` before Homebrew 5, `sh.brew.*` after).
     static func serviceLabels(formulas: [PHPFormula]) -> [String] {
-        ["homebrew.mxcl.nginx", "homebrew.mxcl.dnsmasq"] + formulas.map { "homebrew.mxcl.\($0.formula)" }
+        let names = ["nginx", "dnsmasq"] + formulas.map(\.formula)
+        return names.flatMap { ["homebrew.mxcl.\($0)", "sh.brew.\($0)"] }
     }
 
     /// The shell script run once as root. Pure, so it can be tested and reviewed.

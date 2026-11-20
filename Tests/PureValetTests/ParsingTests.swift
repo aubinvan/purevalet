@@ -183,6 +183,13 @@ final class ParsingTests: XCTestCase {
         XCTAssertEqual(files.isolatedVersions(), ["8.3"])
     }
 
+    func testRootlessSetupCoversBothHomebrewServiceNames() {
+        let labels = RootlessSetup.serviceLabels(formulas: [PHPFormula(formula: "php@8.3", version: "8.3")])
+        XCTAssertTrue(labels.contains("sh.brew.dnsmasq"))
+        XCTAssertTrue(labels.contains("homebrew.mxcl.nginx"))
+        XCTAssertTrue(labels.contains("sh.brew.php@8.3"))
+    }
+
     func testRootlessSetupScript() {
         let script = RootlessSetup.script(user: "ana", home: "/Users/ana", tld: "test",
                                           labels: ["homebrew.mxcl.nginx"], caPem: "/Users/ana/.config/valet/CA/ca.pem")
