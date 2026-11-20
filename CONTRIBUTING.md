@@ -34,7 +34,7 @@ This writes one PNG per settings tab (`general.png`, `sites.png`, `proxies.png`,
 | `Sources/ValetDesktop/SettingsWindow.swift` | Settings window: sidebar + General / Sites / Proxies / About panes |
 | `Sources/ValetDesktop/Shell.swift` | Runs commands with an explicit `PATH` and the `sudo` askpass helper |
 | `Sources/ValetDesktop/ValetModel.swift` | Detection, parsing of Valet's tables, actions |
-| `scripts/make-icon.swift` | Regenerates `Resources/AppIcon.icns` |
+| `scripts/make-icon.swift` | Builds `AppIcon.icns`, the menu bar template icon and `docs/icon.png` from `Resources/source/logo.png` |
 | `scripts/make-dmg.sh` | Builds the DMG and its SHA-256 |
 
 ## Releasing

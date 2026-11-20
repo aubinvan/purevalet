@@ -442,6 +442,19 @@ struct AboutPane: View {
     var body: some View {
         Form {
             Section {
+                HStack(spacing: 14) {
+                    Image(nsImage: NSApp.applicationIconImage)
+                        .resizable()
+                        .frame(width: 64, height: 64)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Valet Desktop").font(.title2.bold())
+                        Text("Laravel Valet dans la barre de menus").settingsCaption()
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+
+            Section {
                 LabeledContent {
                     Text(version).foregroundStyle(.secondary)
                 } label: {

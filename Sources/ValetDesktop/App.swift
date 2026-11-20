@@ -18,10 +18,45 @@ struct ValetDesktopApp: App {
             MenuContent()
                 .environment(model)
         } label: {
-            Image(systemName: model.menuBarSymbol)
+            MenuBarLabel(model: model)
         }
         .menuBarExtraStyle(.menu)
     }
+}
+
+/// Logo de la barre de menus : silhouette « template » (s'adapte au mode clair/sombre),
+/// atténuée quand Valet n'est pas démarré.
+struct MenuBarLabel: View {
+    let model: ValetModel
+
+    var body: some View {
+        let active = model.isInstalled && model.running == true
+        if let image = active ? MenuBarIcon.active : MenuBarIcon.inactive {
+            Image(nsImage: image)
+        } else {
+            Image(systemName: model.menuBarSymbol)
+        }
+    }
+}
+
+enum MenuBarIcon {
+    private static let base: NSImage? = Bundle.main.image(forResource: "MenuBarIcon")
+
+    static let active: NSImage? = {
+        guard let image = base?.copy() as? NSImage else { return nil }
+        image.isTemplate = true
+        return image
+    }()
+
+    static let inactive: NSImage? = {
+        guard let base else { return nil }
+        let image = NSImage(size: base.size, flipped: false) { rect in
+            base.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 0.4)
+            return true
+        }
+        image.isTemplate = true
+        return image
+    }()
 }
 
 @MainActor

@@ -71,7 +71,7 @@ valet install
 xattr -dr com.apple.quarantine "/Applications/Valet Desktop.app"
 ```
 
-L'icône **V** apparaît dans la barre de menus (pas dans le Dock). Clic pour le menu, **Réglages…** (⌘,) pour la fenêtre complète, **Quitter** (⌘Q) pour tout fermer.
+Le logo **V** apparaît dans la barre de menus (pas dans le Dock) ; il est atténué quand Valet est arrêté. Clic pour le menu, **Réglages…** (⌘,) pour la fenêtre complète, **Quitter** (⌘Q) pour tout fermer.
 
 Vérifier le téléchargement avec le fichier `.sha256` joint à la version :
 
