@@ -78,6 +78,14 @@ final class ValetModel {
     var trusted = false
     var mariadbInstalled = false
     var mariadbRunning: Bool?
+    var redisInstalled = false
+    var redisRunning: Bool?
+    /// Mailpit (Homebrew formula), run by PureValet to capture e-mails (see `MailCapture`).
+    var mailpitInstalled = false
+    var mailpitRunning = false
+    /// PHP versions asked for (by Valet's global PHP or an isolated site) that Homebrew no longer has
+    /// → installed version PureValet uses instead.
+    var phpSubstitutions: [String: String] = [:]
     var yerdDetected = false
     /// Standard (non-admin) account: PureValet runs the services itself (see `RootlessRuntime`).
     var rootless = false
@@ -251,11 +259,15 @@ final class ValetModel {
         phpFormulas = php.formulas
         globalPHP = php.global
         mariadbInstalled = FileManager.default.fileExists(atPath: "\(Shell.brewPrefix)/opt/mariadb")
+        redisInstalled = FileManager.default.fileExists(atPath: "\(Shell.brewPrefix)/opt/redis")
+        mailpitInstalled = MailCapture.isInstalled
+        mailpitRunning = MailCapture.shared.isRunning
         trusted = FileManager.default.fileExists(atPath: "/etc/sudoers.d/valet")
         phpMyAdminVersion = PhpMyAdmin.installedVersion
         launchAtLogin = SMAppService.mainApp.status == .enabled
 
-        async let mariadb = mariadbInstalled ? Self.queryMariaDB() : nil
+        async let mariadb = mariadbInstalled ? Self.queryService("mariadb") : nil
+        async let redis = redisInstalled ? Self.queryService("redis") : nil
 
         if let binary = Self.locateValet() {
             install = .installed(binary: binary)
@@ -268,6 +280,7 @@ final class ValetModel {
                     globalPHP = formula.formula
                 }
                 running = RootlessRuntime.shared.isRunning
+                phpSubstitutions = rootlessPlan()?.substitutions ?? [:]
                 rootlessSetup = await RootlessSetup.status(files: files, formulas: phpFormulas)
                 if !rootlessSetup.ready { adminAccounts = await RootlessSetup.adminAccounts() }
             } else {
@@ -277,6 +290,7 @@ final class ValetModel {
                 async let processes = Shell.run("/bin/ps", ["-axo", "comm="])
                 let (s, ps) = await (status, processes)
                 running = s.succeeded || Self.valetServicesRunning(ps.output)
+                phpSubstitutions = adminSubstitutions()
             }
             // Read Valet's files directly: `valet links/parked/proxies` run sudo internally, which fails
             // on a standard account and needs a cached password otherwise.
@@ -304,8 +318,11 @@ final class ValetModel {
             ComponentVersion(name: "dnsmasq", version: Self.formulaVersion("dnsmasq")),
             ComponentVersion(name: "Composer", version: Self.formulaVersion("composer")),
             ComponentVersion(name: "MariaDB", version: Self.formulaVersion("mariadb")),
+            ComponentVersion(name: "Redis", version: Self.formulaVersion("redis")),
+            ComponentVersion(name: "Mailpit", version: Self.formulaVersion("mailpit")),
         ]
         mariadbRunning = await mariadb
+        redisRunning = await redis
         if running == true {
             await checkSites()
         } else {
@@ -313,8 +330,8 @@ final class ValetModel {
         }
     }
 
-    private static func queryMariaDB() async -> Bool? {
-        let result = await Shell.run(brew, ["services", "info", "mariadb", "--json"])
+    private static func queryService(_ formula: String) async -> Bool? {
+        let result = await Shell.run(brew, ["services", "info", formula, "--json"])
         guard result.succeeded,
               let data = result.output.data(using: .utf8),
               let array = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]],
@@ -331,6 +348,37 @@ final class ValetModel {
     /// Global PHP version (`8.5`): the formula Homebrew links, or in rootless mode the one valet.sock uses.
     var globalPHPVersion: String? {
         phpFormulas.first { $0.formula == globalPHP }?.version
+    }
+
+    /// Version of the formula Homebrew links as `php` (read from `<prefix>/bin/php`).
+    private var linkedPHPVersion: String? {
+        guard let target = try? FileManager.default.destinationOfSymbolicLink(atPath: "\(Shell.brewPrefix)/bin/php"),
+              let cellar = target.split(separator: "/").firstIndex(of: "Cellar") else { return nil }
+        let formula = String(target.split(separator: "/")[cellar + 1])
+        return phpFormulas.first { $0.formula == formula }?.version
+    }
+
+    /// What the rootless runtime runs, with PHP versions that are gone replaced by installed ones.
+    private func rootlessPlan() -> RootlessRuntime.Plan? {
+        RootlessRuntime.shared.plan(files: files, requestedGlobal: files.globalSocketVersion,
+                                    linked: linkedPHPVersion, formulas: phpFormulas)
+    }
+
+    /// Admin mode: Valet's own services run, so only the versions that are gone are reported here.
+    private func adminSubstitutions() -> [String: String] {
+        guard let plan = RootlessRuntime.plan(requestedGlobal: files.globalSocketVersion, linked: linkedPHPVersion,
+                                              isolated: files.isolatedVersions(), formulas: phpFormulas) else { return [:] }
+        return plan.substitutions
+    }
+
+    /// One line per PHP version replaced, e.g. "PHP 8.5 is no longer installed: PHP 8.6 is used instead."
+    var phpNotice: String? {
+        guard !phpSubstitutions.isEmpty else { return nil }
+        return phpSubstitutions.sorted { $0.key < $1.key }.map { wanted, used in
+            rootless
+                ? String(localized: "PHP \(wanted) is no longer installed: PHP \(used) is used instead.")
+                : String(localized: "PHP \(wanted) is no longer installed: start Valet to switch to PHP \(used).")
+        }.joined(separator: "\n")
     }
 
     // MARK: - Site health
@@ -489,8 +537,8 @@ final class ValetModel {
     }
 
     private func reloadRootless() async throws {
-        guard let version = files.globalSocketVersion ?? globalPHPVersion else { return }
-        try await RootlessRuntime.shared.reload(files: files, globalVersion: version, formulas: phpFormulas)
+        guard let plan = rootlessPlan() else { return }
+        try await RootlessRuntime.shared.reload(files: files, plan: plan)
     }
 
     /// `php` → `php@8.5`, `php@8.3` → `php@8.3` (the form Valet writes in its files).
@@ -506,10 +554,12 @@ final class ValetModel {
         var result = CommandResult(status: 0, output: "")
         if start {
             do {
-                guard let version = files.globalSocketVersion ?? globalPHPVersion else {
+                // Re-read the formulas: Homebrew may have replaced a PHP version since the last refresh.
+                phpFormulas = Self.scanPHPFormulas().formulas
+                guard let plan = rootlessPlan() else {
                     throw RootlessError.start(String(localized: "No Homebrew PHP found for the global version."))
                 }
-                try await RootlessRuntime.shared.start(files: files, globalVersion: version, formulas: phpFormulas)
+                try await RootlessRuntime.shared.start(files: files, plan: plan)
             } catch {
                 result = CommandResult(status: 1, output: error.localizedDescription)
             }
@@ -586,7 +636,21 @@ final class ValetModel {
     }
 
     func start() async {
-        if rootless { await runRootless(String(localized: "Starting Valet"), start: true) } else { await valet(String(localized: "Starting Valet"), ["start"]) }
+        if rootless { await runRootless(String(localized: "Starting Valet"), start: true) } else {
+            if await switchFromMissingGlobalPHP() { return }
+            await valet(String(localized: "Starting Valet"), ["start"])
+        }
+    }
+
+    /// Admin mode: when Valet's global PHP is no longer installed, `valet use` the closest installed one
+    /// (it also restarts Valet's services). True if it did.
+    private func switchFromMissingGlobalPHP() async -> Bool {
+        phpFormulas = Self.scanPHPFormulas().formulas
+        guard let wanted = files.globalSocketVersion, !phpFormulas.contains(where: { $0.version == wanted }),
+              let used = RootlessRuntime.closestVersion(to: wanted, among: phpFormulas.map(\.version)),
+              let formula = phpFormulas.first(where: { $0.version == used }) else { return false }
+        await valet(String(localized: "Global PHP → \(formula.formula)"), ["use", formula.formula])
+        return true
     }
 
     func stop() async {
@@ -594,7 +658,10 @@ final class ValetModel {
     }
 
     func restart() async {
-        if rootless { await runRootless(String(localized: "Restarting Valet"), start: true) } else { await valet(String(localized: "Restarting Valet"), ["restart"]) }
+        if rootless { await runRootless(String(localized: "Restarting Valet"), start: true) } else {
+            if await switchFromMissingGlobalPHP() { return }
+            await valet(String(localized: "Restarting Valet"), ["restart"])
+        }
     }
     func trust() async { await valet(String(localized: "Enabling password-free commands"), ["trust"]) }
 
@@ -696,19 +763,57 @@ final class ValetModel {
         }
     }
 
-    var anyServiceRunning: Bool { running == true || mariadbRunning == true }
-    var anyServiceStopped: Bool { (isInstalled && running != true) || (mariadbInstalled && mariadbRunning != true) }
+    func setRedis(_ start: Bool) async {
+        let label = start ? String(localized: "Starting Redis") : String(localized: "Stopping Redis")
+        await execute(label) {
+            // Like MariaDB: `run` never registers Redis to launch at login.
+            await Shell.run(Self.brew, ["services", start ? "run" : "stop", "redis"])
+        }
+    }
 
-    /// Starts Valet (nginx, PHP-FPM, dnsmasq) and MariaDB if installed.
+    func setMailCapture(_ start: Bool) async {
+        let label = start ? String(localized: "Starting e-mail capture") : String(localized: "Stopping e-mail capture")
+        await execute(label) {
+            if !start {
+                await MailCapture.shared.stop()
+                return CommandResult(status: 0, output: "")
+            }
+            do {
+                try await MailCapture.shared.start()
+                return CommandResult(status: 0, output: "")
+            } catch {
+                return CommandResult(status: 1, output: error.localizedDescription)
+            }
+        }
+    }
+
+    func openMailbox() { NSWorkspace.shared.open(MailCapture.webURL) }
+
+    func copyMailEnv() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(MailCapture.laravelEnv, forType: .string)
+    }
+
+    var anyServiceRunning: Bool { running == true || mariadbRunning == true || redisRunning == true || mailpitRunning }
+    var anyServiceStopped: Bool {
+        (isInstalled && running != true) || (mariadbInstalled && mariadbRunning != true)
+            || (redisInstalled && redisRunning != true) || (mailpitInstalled && !mailpitRunning)
+    }
+
+    /// Starts Valet (nginx, PHP-FPM, dnsmasq) and, if installed, MariaDB, Redis and the e-mail capture.
     func startAll() async {
         if isInstalled && running != true { await start() }
         if mariadbInstalled && mariadbRunning != true { await setMariaDB(true) }
+        if redisInstalled && redisRunning != true { await setRedis(true) }
+        if mailpitInstalled && !mailpitRunning { await setMailCapture(true) }
     }
 
-    /// Stops Valet and MariaDB.
+    /// Stops Valet, MariaDB, Redis and the e-mail capture.
     func stopAll() async {
         if isInstalled && running == true { await stop() }
         if mariadbInstalled && mariadbRunning == true { await setMariaDB(false) }
+        if redisInstalled && redisRunning == true { await setRedis(false) }
+        if mailpitRunning { await setMailCapture(false) }
     }
 
     /// Called when the app quits: stops whatever is still running so nothing is left in the background
@@ -724,6 +829,10 @@ final class ValetModel {
         if mariadbInstalled, mariadbRunning == true {
             _ = await Shell.run(Self.brew, ["services", "stop", "mariadb"])
         }
+        if redisInstalled, redisRunning == true {
+            _ = await Shell.run(Self.brew, ["services", "stop", "redis"])
+        }
+        await MailCapture.shared.stop()
     }
 
     // MARK: - phpMyAdmin
@@ -741,7 +850,11 @@ final class ValetModel {
 
     func openPhpMyAdmin() {
         let url = phpMyAdminSite.map(displayURL) ?? "https://\(PhpMyAdmin.siteName).\(tld)"
-        if let url = URL(string: url) { NSWorkspace.shared.open(url) }
+        Task {
+            // So `admin` / `admin` works even on a phpMyAdmin installed before this login existed.
+            if mariadbRunning == true { _ = await PhpMyAdmin.ensureAdminUser() }
+            if let url = URL(string: url) { NSWorkspace.shared.open(url) }
+        }
     }
 
     /// Installs (or updates) the built-in phpMyAdmin and serves it as `phpmyadmin.<tld>` over HTTPS,
@@ -758,6 +871,10 @@ final class ValetModel {
             phpMyAdminLatest = release
             try await PhpMyAdmin.install(release)
             output.append("phpMyAdmin \(release.version) → \(PhpMyAdmin.directory.path)")
+            if mariadbRunning == true {
+                let user = await PhpMyAdmin.ensureAdminUser()
+                output.append(user.succeeded ? "✓ MariaDB: \(PhpMyAdmin.defaultUser) / \(PhpMyAdmin.defaultPassword)" : user.output)
+            }
             var steps: [[String]] = [["link", PhpMyAdmin.siteName]]
             if let php = PhpMyAdmin.compatiblePHP(constraint: release.phpConstraint, installed: phpFormulas, global: globalPHP) {
                 steps.append(["isolate", php, "--site=\(PhpMyAdmin.siteName)"])

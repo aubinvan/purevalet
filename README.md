@@ -58,12 +58,14 @@ If `valet trust` is not set up, PureValet offers once to enable it instead of as
 | Sites | Linked and parked sites: open, copy URL, Finder, Terminal | `valet links`, `valet parked` |
 | Link / Park | Link one folder, or park a folder of projects; forget it | `valet link`, `valet park`, `valet forget` |
 | HTTPS | Secure / unsecure a site | `valet secure`, `valet unsecure` |
-| PHP | Global version, or a version per site | `valet use`, `valet isolate`, `valet unisolate` |
+| PHP | Global version, or a version per site. If Homebrew removes a version (e.g. `brew upgrade` turns 8.5 into 8.6), the closest installed one is used automatically and a warning says so | `valet use`, `valet isolate`, `valet unisolate` |
 | Proxies | Proxy `name.test` to a local port (Node, Vite…) | `valet proxy`, `valet unproxy` |
 | Password | Stop the password prompts | `valet trust` |
 | Files | Open Valet logs and configuration | `~/.config/valet` |
 | MariaDB | Start / stop Homebrew MariaDB (not registered at login) | `brew services run\|stop mariadb` |
 | phpMyAdmin | Install, update and open a built-in phpMyAdmin on `https://phpmyadmin.test` | official release + `valet link/isolate/secure` |
+| Redis | Start / stop Homebrew Redis (not registered at login) | `brew services run\|stop redis` |
+| E-mail capture | Run Mailpit on 127.0.0.1 (inbox on `http://127.0.0.1:8025`, SMTP on port 1025); PHP's `mail()` goes there in the no-admin mode | `mailpit` (Homebrew formula), run by PureValet |
 
 PureValet also warns you if Yerd is installed, since it competes for ports 80/443, the `.test` DNS and port 3306.
 
@@ -115,7 +117,7 @@ shasum -a 256 -c PureValet-x.y.z.dmg.sha256
 2. installs it in `~/Library/Application Support/PureValet/phpMyAdmin` with a config for the local MariaDB socket;
 3. serves it on `https://phpmyadmin.test`, isolated on a PHP version it supports (e.g. PHP 8.3 if your global PHP is 8.5).
 
-Log in with your **macOS user name and an empty password**: Homebrew's MariaDB recognises your account through its local socket (`unix_socket`), so no database password is stored anywhere. *Update to x.y.z* appears when a newer phpMyAdmin is released.
+Log in with **`admin` / `admin`**: PureValet creates this MariaDB account (every right, accepted only from this Mac, an existing `admin` account is left alone). Your macOS user name with an empty password still works too. *Update to x.y.z* appears when a newer phpMyAdmin is released.
 
 ## Updates
 

@@ -146,7 +146,6 @@
 "Stop All Services" = "Tout arrêter";
 "Start services when PureValet opens" = "Démarrer les services à l’ouverture de PureValet";
 "Stop all services when quitting" = "Arrêter tous les services en quittant";
-"Services are Valet (nginx, PHP-FPM, dnsmasq) and Homebrew MariaDB. When PureValet quits, they are stopped and unregistered, so nothing keeps running or restarts at boot. Enable password-free commands to quit without a password prompt." = "Les services sont Valet (nginx, PHP-FPM, dnsmasq) et MariaDB Homebrew. Quand PureValet quitte, ils sont arrêtés et désenregistrés : rien ne continue de tourner ni ne redémarre avec le Mac. Activez les commandes sans mot de passe pour quitter sans invite de mot de passe.";
 
 /* Updates */
 "Updates" = "Mises à jour";
@@ -183,7 +182,7 @@
 "Install…" = "Installer…";
 "Install PureValet's copy…" = "Installer la copie de PureValet…";
 "Update to %@" = "Mettre à jour vers %@";
-"Log in with your macOS user name (%@) and an empty password: MariaDB recognises your account through its local socket, so no password is stored. PureValet installs the official release (SHA-256 checked) in its Application Support folder and serves it on `phpmyadmin.%@`." = "Connectez-vous avec votre nom d’utilisateur macOS (%@) et un mot de passe vide : MariaDB reconnaît votre compte via son socket local, aucun mot de passe n’est donc stocké. PureValet installe la version officielle (empreinte SHA-256 vérifiée) dans son dossier Application Support et la sert sur `phpmyadmin.%@`.";
+"Log in with `%@` / `%@`: PureValet creates this MariaDB account (with every right), accepted only from this Mac. Your macOS user name (%@) with an empty password still works. PureValet installs the official release (SHA-256 checked) in its Application Support folder and serves it on `phpmyadmin.%@`." = "Connectez-vous avec `%@` / `%@` : PureValet crée ce compte MariaDB (avec tous les droits), accepté uniquement depuis ce Mac. Votre nom d’utilisateur macOS (%@) avec un mot de passe vide fonctionne toujours. PureValet installe la version officielle (empreinte SHA-256 vérifiée) dans son dossier Application Support et la sert sur `phpmyadmin.%@`.";
 "The phpMyAdmin download failed." = "Le téléchargement de phpMyAdmin a échoué.";
 "The downloaded phpMyAdmin archive does not match its official SHA-256 checksum." = "L’archive phpMyAdmin téléchargée ne correspond pas à son empreinte SHA-256 officielle.";
 "The phpMyAdmin archive could not be unpacked." = "L’archive phpMyAdmin n’a pas pu être décompressée.";
@@ -207,3 +206,27 @@
 
 "A one-time setup needs an administrator account (macOS asks for its name and password): it points `.%@` to PureValet's DNS and trusts Valet's HTTPS certificate authority." = "Une configuration unique nécessite un compte administrateur (macOS demande son nom et son mot de passe) : elle dirige `.%@` vers le DNS de PureValet et approuve l’autorité de certification HTTPS de Valet.";
 "Valet's former root services are still installed. They are no longer used (DNS goes through PureValet) and need nothing from you; only an administrator could remove them, which is optional." = "Les anciens services root de Valet sont encore installés. Ils ne servent plus (le DNS passe par PureValet) et ne demandent rien de votre part ; seul un administrateur pourrait les retirer, ce qui est facultatif.";
+
+/* Redis, e-mail capture, PHP fallback */
+"Cache" = "Cache";
+"E-mail capture" = "Capture d’e-mails";
+"Every e-mail your sites send lands in a local inbox (http://127.0.0.1:%@) instead of reaching real people. PHP's `mail()` (WordPress's default) is routed there in the no-admin mode; for Laravel, use the SMTP settings below." = "Chaque e-mail envoyé par vos sites arrive dans une boîte locale (http://127.0.0.1:%@) au lieu de partir chez de vraies personnes. La fonction `mail()` de PHP (utilisée par défaut par WordPress) y est redirigée en mode sans admin ; pour Laravel, utilisez les réglages SMTP ci-dessous.";
+"Homebrew replaced or removed this PHP version (for example during `brew upgrade`). PureValet automatically uses the closest installed version (the next newer one if possible) so the sites keep working. Pick a global version above, or isolate the site again, to choose yourself." = "Homebrew a remplacé ou supprimé cette version de PHP (par exemple pendant un `brew upgrade`). PureValet utilise automatiquement la version installée la plus proche (la suivante plus récente si possible) pour que les sites continuent de fonctionner. Choisissez une version globale ci-dessus, ou isolez de nouveau le site, pour décider vous-même.";
+"Listens on 127.0.0.1:6379 (Homebrew's configuration). Laravel: `REDIS_HOST=127.0.0.1`, `REDIS_PORT=6379`." = "Écoute sur 127.0.0.1:6379 (configuration Homebrew). Laravel : `REDIS_HOST=127.0.0.1`, `REDIS_PORT=6379`.";
+"Mailpit" = "Mailpit";
+"Mailpit is not installed." = "Mailpit n’est pas installé.";
+"Not installed" = "Non installé";
+"Open Captured E-mails" = "Ouvrir les e-mails capturés";
+"PHP %@ is no longer installed: PHP %@ is used instead." = "PHP %@ n’est plus installé : PHP %@ est utilisé à la place.";
+"PHP %@ is no longer installed: start Valet to switch to PHP %@." = "PHP %@ n’est plus installé : démarrez Valet pour passer à PHP %@.";
+"Redis (Homebrew)" = "Redis (Homebrew)";
+"Run this command in Terminal, then reopen this window. PureValet never installs anything itself." = "Lancez cette commande dans le Terminal, puis rouvrez cette fenêtre. PureValet n’installe jamais rien lui-même.";
+"Services are Valet (nginx, PHP-FPM, dnsmasq), and MariaDB, Redis and Mailpit when installed. When PureValet quits, they are stopped and unregistered, so nothing keeps running or restarts at boot. Enable password-free commands to quit without a password prompt." = "Les services sont Valet (nginx, PHP-FPM, dnsmasq), et MariaDB, Redis et Mailpit s’ils sont installés. Quand PureValet quitte, ils sont arrêtés et désenregistrés : rien ne tourne en fond ni ne redémarre avec le Mac. Activez les commandes sans mot de passe pour quitter sans invite de mot de passe.";
+"Start E-mail Capture" = "Démarrer la capture d’e-mails";
+"Start Redis" = "Démarrer Redis";
+"Starting Redis" = "Démarrage de Redis";
+"Starting e-mail capture" = "Démarrage de la capture d’e-mails";
+"Stop E-mail Capture" = "Arrêter la capture d’e-mails";
+"Stop Redis" = "Arrêter Redis";
+"Stopping Redis" = "Arrêt de Redis";
+"Stopping e-mail capture" = "Arrêt de la capture d’e-mails";

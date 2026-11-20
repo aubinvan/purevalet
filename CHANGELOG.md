@@ -5,6 +5,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+- Redis: start / stop Homebrew Redis from the menu and the settings (`brew services run|stop redis`, never registered at login), included in *Start All* / *Stop All* and stopped when PureValet quits.
+- E-mail capture with Mailpit: PureValet runs it bound to 127.0.0.1 (inbox on `http://127.0.0.1:8025`, SMTP on port 1025, messages kept between runs). In the no-admin mode PHP's `mail()` (WordPress's default) is routed there; the settings give the Laravel `.env` lines to copy.
+- phpMyAdmin login is now `admin` / `admin`: PureValet creates this local-only MariaDB account (never changing an existing one) when installing or opening phpMyAdmin.
+- Redis and Mailpit appear in the *About* versions. When they are missing, the settings show the `brew install` command (PureValet installs nothing).
+
+### Fixed
+- 502 Bad Gateway after Homebrew replaced a PHP version (e.g. `brew upgrade` turning `php` 8.5 into 8.6): in the no-admin mode, the global PHP and isolated sites now fall back to the closest installed version (the next newer one if possible) and `valet.sock` is repaired; with an administrator account, *Start* / *Restart* run `valet use` on that version first. A warning in the menu and the settings names the version replaced.
+
 ## [0.9.3] - 2026-11-20
 
 ### Changed

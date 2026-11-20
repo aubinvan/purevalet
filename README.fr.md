@@ -52,12 +52,14 @@ Si `valet trust` n’est pas activé, PureValet propose une seule fois de l’ac
 | Sites | Sites liés et parqués : ouvrir, copier l’URL, Finder, Terminal | `valet links`, `valet parked` |
 | Lier / Parquer | Lier un dossier, ou parquer un dossier de projets ; l’oublier | `valet link`, `valet park`, `valet forget` |
 | HTTPS | Activer / désactiver HTTPS | `valet secure`, `valet unsecure` |
-| PHP | Version globale, ou une version par site | `valet use`, `valet isolate`, `valet unisolate` |
+| PHP | Version globale, ou une version par site. Si Homebrew retire une version (par ex. `brew upgrade` remplace la 8.5 par la 8.6), la version installée la plus proche est utilisée automatiquement et un avertissement le signale | `valet use`, `valet isolate`, `valet unisolate` |
 | Proxys | Rediriger `nom.test` vers un port local (Node, Vite…) | `valet proxy`, `valet unproxy` |
 | Mot de passe | Supprimer les invites de mot de passe | `valet trust` |
 | Fichiers | Ouvrir les logs et la configuration de Valet | `~/.config/valet` |
 | MariaDB | Démarrer / arrêter MariaDB Homebrew (jamais enregistrée à la connexion) | `brew services run\|stop mariadb` |
 | phpMyAdmin | Installer, mettre à jour et ouvrir un phpMyAdmin intégré sur `https://phpmyadmin.test` | version officielle + `valet link/isolate/secure` |
+| Redis | Démarrer / arrêter Redis Homebrew (jamais enregistré à la connexion) | `brew services run\|stop redis` |
+| Capture d’e-mails | Lancer Mailpit sur 127.0.0.1 (boîte sur `http://127.0.0.1:8025`, SMTP sur le port 1025) ; la fonction `mail()` de PHP y est redirigée en mode sans admin | `mailpit` (formule Homebrew), lancé par PureValet |
 
 PureValet prévient aussi si Yerd est installé (mêmes ports 80/443, même DNS `.test`, même port 3306).
 
@@ -109,7 +111,7 @@ shasum -a 256 -c PureValet-x.y.z.dmg.sha256
 2. l’installe dans `~/Library/Application Support/PureValet/phpMyAdmin` avec une configuration pour le socket local de MariaDB ;
 3. la sert sur `https://phpmyadmin.test`, isolée sur une version de PHP qu’elle prend en charge (par exemple PHP 8.3 si votre PHP global est 8.5).
 
-Connexion avec votre **nom d’utilisateur macOS et un mot de passe vide** : le MariaDB de Homebrew reconnaît votre compte via son socket local (`unix_socket`), aucun mot de passe de base de données n’est donc stocké. *Mettre à jour vers x.y.z* apparaît quand une nouvelle version de phpMyAdmin sort.
+Connexion avec **`admin` / `admin`** : PureValet crée ce compte MariaDB (tous les droits, accepté uniquement depuis ce Mac ; un compte `admin` existant n’est pas modifié). Votre nom d’utilisateur macOS avec un mot de passe vide fonctionne toujours. *Mettre à jour vers x.y.z* apparaît quand une nouvelle version de phpMyAdmin sort.
 
 ## Mises à jour
 
