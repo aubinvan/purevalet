@@ -3,6 +3,17 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] - 2026-11-20
+
+### Changed
+- New Hex-inspired interface: a native macOS menu in the menu bar (status, Start / Stop, Sites, Proxies and global PHP submenus, MariaDB, Settings… ⌘, and Quit ⌘Q).
+- Full settings window with a sidebar (General, Sites, Proxies, About) and grouped forms, created on demand and released when closed.
+- State refreshes when the menu opens (no timer).
+
+### Added
+- "Copy" button for the Valet install commands, About pane with version and environment info.
+- `--snapshot <dir>` now captures the real settings window, one PNG per tab.
+
 ## [0.1.0] - 2026-11-20
 
 ### Added

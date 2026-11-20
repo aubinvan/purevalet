@@ -20,19 +20,20 @@ swift test           # unit tests (Valet table parsing, slug)
 Quick visual check without clicking the menu bar:
 
 ```bash
-"build/Valet Desktop.app/Contents/MacOS/ValetDesktop" --snapshot /tmp/valet.png
+"build/Valet Desktop.app/Contents/MacOS/ValetDesktop" --snapshot /tmp/valet-snap
 ```
 
-(AppKit-backed controls such as buttons render as placeholders in the snapshot; this is an `ImageRenderer` limitation.)
+This writes one PNG per settings tab (`general.png`, `sites.png`, `proxies.png`, `about.png`). The menu bar menu itself cannot be captured this way.
 
 ## Code layout
 
 | File | Role |
 | --- | --- |
-| `Sources/ValetDesktop/App.swift` | Entry point, `MenuBarExtra`, `--snapshot` mode |
+| `Sources/ValetDesktop/App.swift` | Entry point, `MenuBarExtra` (menu style), `--snapshot` mode |
+| `Sources/ValetDesktop/MenuContent.swift` | Native menu bar menu |
+| `Sources/ValetDesktop/SettingsWindow.swift` | Settings window: sidebar + General / Sites / Proxies / About panes |
 | `Sources/ValetDesktop/Shell.swift` | Runs commands with an explicit `PATH` and the `sudo` askpass helper |
 | `Sources/ValetDesktop/ValetModel.swift` | Detection, parsing of Valet's tables, actions |
-| `Sources/ValetDesktop/ContentView.swift` | UI |
 | `scripts/make-icon.swift` | Regenerates `Resources/AppIcon.icns` |
 | `scripts/make-dmg.sh` | Builds the DMG and its SHA-256 |
 

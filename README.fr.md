@@ -11,13 +11,24 @@
 
 ---
 
+<p align="center">
+  <img src="docs/screenshot-general.png" width="640" alt="Fenêtre de réglages de Valet Desktop">
+</p>
+
 Valet est l'environnement PHP local le plus léger sur macOS (nginx + dnsmasq + php-fpm, sans Docker ni VM), mais il ne s'utilise qu'en ligne de commande. Valet Desktop met les commandes courantes à un clic, sans rien alourdir :
 
 - **SwiftUI natif**, DMG d'environ 560 Ko, universel (Apple Silicon + Intel), aucune dépendance.
-- **Rien ne tourne en fond.** Pas de minuteur, pas de démon. L'état est relu à l'ouverture du menu et après chaque action. Une fois l'appli quittée, il ne reste aucun processus.
+- **Rien ne tourne en fond.** Pas de minuteur, pas de démon. L'état est relu à l'ouverture du menu ou de la fenêtre, et après chaque action. Une fois l'appli quittée, il ne reste aucun processus.
 - **N'installe rien.** Si Valet est absent, l'appli l'affiche et donne la commande à lancer toi-même.
 
 > Projet communautaire, non affilié à Laravel.
+
+## Interface
+
+Inspirée de [Hex](https://hex.audio) : un menu natif tout simple dans la barre de menus pour les actions courantes, et une fenêtre de réglages pour le reste.
+
+- **Menu de la barre de menus** : état, Démarrer / Arrêter Valet, *Sites* (ouvrir dans le navigateur, lier un dossier), *Proxys*, *PHP global* (coche sur la version active), MariaDB, **Réglages… ⌘,**, **Quitter ⌘Q**.
+- **Fenêtre de réglages** avec barre latérale : *Général* (état, PHP global, MariaDB, aide à l'installation), *Sites* (HTTPS, PHP par site, Finder, unlink), *Proxys* (liste, ajout, suppression), *À propos*. La fenêtre est créée à l'ouverture et libérée à la fermeture.
 
 ## Fonctions
 
@@ -60,12 +71,12 @@ valet install
 xattr -dr com.apple.quarantine "/Applications/Valet Desktop.app"
 ```
 
-L'icône **V** apparaît dans la barre de menus (pas dans le Dock). **Quitter** (⌘Q) dans le menu ferme tout.
+L'icône **V** apparaît dans la barre de menus (pas dans le Dock). Clic pour le menu, **Réglages…** (⌘,) pour la fenêtre complète, **Quitter** (⌘Q) pour tout fermer.
 
 Vérifier le téléchargement avec le fichier `.sha256` joint à la version :
 
 ```bash
-shasum -a 256 -c ValetDesktop-0.1.0.dmg.sha256
+shasum -a 256 -c ValetDesktop-x.y.z.dmg.sha256
 ```
 
 ## Mot de passe administrateur (`sudo`)

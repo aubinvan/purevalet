@@ -56,6 +56,19 @@ final class ValetModel {
     var lastFailed = false
 
     private var isRefreshing = false
+    private var lastRefresh: Date?
+
+    init() {
+        // Rafraîchit quand l'utilisateur ouvre le menu de la barre de menus (aucun minuteur).
+        NotificationCenter.default.addObserver(forName: NSMenu.didBeginTrackingNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                if let last = self.lastRefresh, Date().timeIntervalSince(last) < 3 { return }
+                Task { await self.refresh() }
+            }
+        }
+        Task { await refresh() }
+    }
 
     static let brew = "\(Shell.brewPrefix)/bin/brew"
     private static let home = Shell.home
@@ -71,6 +84,33 @@ final class ValetModel {
         case .notInstalled: return "v.circle.badge.questionmark"
         case .installed: return running == true ? "v.circle.fill" : "v.circle"
         }
+    }
+
+    var statusText: String {
+        if let busy = busyLabel { return "\(busy)…" }
+        switch install {
+        case .unknown: return "Vérification…"
+        case .notInstalled: return "Valet non installé"
+        case .installed:
+            switch running {
+            case .some(true): return "Valet démarré"
+            case .some(false): return "Valet arrêté"
+            case .none: return "État inconnu"
+            }
+        }
+    }
+
+    var valetBinary: String? {
+        if case let .installed(binary) = install { return binary }
+        return nil
+    }
+
+    func displayURL(_ site: ValetSite) -> String {
+        site.url.isEmpty ? "\(site.secured ? "https" : "http")://\(site.name).\(tld)" : site.url
+    }
+
+    func displayURL(_ proxy: ValetProxy) -> String {
+        proxy.url.isEmpty ? "\(proxy.secured ? "https" : "http")://\(proxy.name).\(tld)" : proxy.url
     }
 
     // MARK: - Détection
@@ -125,7 +165,10 @@ final class ValetModel {
     func refresh() async {
         guard !isRefreshing else { return }
         isRefreshing = true
-        defer { isRefreshing = false }
+        defer {
+            isRefreshing = false
+            lastRefresh = Date()
+        }
 
         yerdDetected = FileManager.default.isExecutableFile(atPath: "\(Self.home)/.local/bin/yerd")
         let php = Self.scanPHPFormulas()
@@ -306,13 +349,11 @@ final class ValetModel {
     }
 
     func open(_ site: ValetSite) {
-        let fallback = "\(site.secured ? "https" : "http")://\(site.name).\(tld)"
-        if let url = URL(string: site.url.isEmpty ? fallback : site.url) { NSWorkspace.shared.open(url) }
+        if let url = URL(string: displayURL(site)) { NSWorkspace.shared.open(url) }
     }
 
     func open(_ proxy: ValetProxy) {
-        let fallback = "\(proxy.secured ? "https" : "http")://\(proxy.name).\(tld)"
-        if let url = URL(string: proxy.url.isEmpty ? fallback : proxy.url) { NSWorkspace.shared.open(url) }
+        if let url = URL(string: displayURL(proxy)) { NSWorkspace.shared.open(url) }
     }
 
     func reveal(_ site: ValetSite) {

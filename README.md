@@ -17,13 +17,24 @@
 
 ---
 
+<p align="center">
+  <img src="docs/screenshot-general.png" width="640" alt="Valet Desktop settings window">
+</p>
+
 Valet is the lightest local PHP environment on macOS (nginx + dnsmasq + php-fpm, no Docker, no VM), but it only has a CLI. Valet Desktop puts the everyday commands one click away in the menu bar, and stays out of the way:
 
 - **Native SwiftUI**, ~560 KB DMG, universal (Apple Silicon + Intel), no dependencies.
-- **Nothing runs in the background.** No timers, no daemon, no helper. State is read when you open the menu and after each action. Quit the app and nothing is left.
+- **Nothing runs in the background.** No timers, no daemon, no helper. State is read when you open the menu or the settings window, and after each action. Quit the app and nothing is left.
 - **Installs nothing.** If Valet is missing, the app says so and shows the command to run yourself.
 
 > Valet Desktop is a community project and is not affiliated with or endorsed by Laravel.
+
+## Interface
+
+Inspired by [Hex](https://hex.audio): a plain native menu in the menu bar for everyday actions, and a settings window for the rest.
+
+- **Menu bar menu**: status, Start / Stop Valet, *Sites* (open in browser, link a folder), *Proxies*, *Global PHP* (checkmark on the active version), MariaDB, **Settings… ⌘,**, **Quit ⌘Q**.
+- **Settings window** with a sidebar: *General* (status, global PHP, MariaDB, install help), *Sites* (HTTPS, per-site PHP, Finder, unlink), *Proxies* (list, add, remove), *About*. The window is created when you open it and released when you close it.
 
 ## Features
 
@@ -66,12 +77,12 @@ valet install
 xattr -dr com.apple.quarantine "/Applications/Valet Desktop.app"
 ```
 
-The **V** icon appears in the menu bar (no Dock icon). Use **Quit** (⌘Q) in the menu to close it.
+The **V** icon appears in the menu bar (no Dock icon). Click it for the menu, **Settings…** (⌘,) for the full window, **Quit** (⌘Q) to close everything.
 
 You can check the download against the `.sha256` file attached to the release:
 
 ```bash
-shasum -a 256 -c ValetDesktop-0.1.0.dmg.sha256
+shasum -a 256 -c ValetDesktop-x.y.z.dmg.sha256
 ```
 
 ## Administrator password (`sudo`)
