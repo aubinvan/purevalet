@@ -198,9 +198,18 @@ final class ParsingTests: XCTestCase {
         XCTAssertTrue(script.contains("> /etc/resolver/'test'"))
         XCTAssertTrue(script.contains("chown -R 'ana':staff '/Users/ana/.config/valet'"))
         XCTAssertTrue(script.contains("add-trusted-cert -d -r trustRoot"))
-        XCTAssertTrue(script.contains("pkill -f 'dnsmasq --keep-in-foreground"))
+        XCTAssertTrue(script.contains(#"pkill -f 'dnsmasq --keep-in-foreground -C /opt/homebrew/etc/dnsmasq\.conf'"#))
+        XCTAssertTrue(script.contains(#"php-fpm: master process \(/opt/homebrew/etc/php/'"#), "regex-escaped parenthesis")
         let tricky = RootlessSetup.script(user: "o'neil", home: "/Users/o'neil", tld: "test", labels: [], caPem: "/x")
         XCTAssertTrue(tricky.contains("'o'\\''neil'"), "single quotes are escaped")
+    }
+
+    func testSetupFailureExplanations() {
+        let cancelled = RootlessSetup.explain(CommandResult(status: 1, output: "execution error: User canceled. (-128)"))
+        XCTAssertTrue(cancelled.output.hasPrefix(String(localized: "Setup cancelled.")))
+        let refused = RootlessSetup.explain(CommandResult(status: 1, output: "execution error: The administrator user name or password was incorrect. (-60007)"))
+        XCTAssertTrue(refused.output.contains("(-60007)"))
+        XCTAssertFalse(refused.output.hasPrefix("execution error"))
     }
 
     func testSlug() {

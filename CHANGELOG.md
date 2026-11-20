@@ -5,6 +5,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-11-20
+
+### Fixed
+- One-time no-admin setup: the macOS dialog now says to replace the pre-filled (standard) name with an administrator account, the settings list this Mac's administrator accounts, and a refused password or a cancel is explained instead of "failed (exit code 1)".
+- The leftover root PHP-FPM pattern is regex-escaped, so `pkill` really stops it.
+
 ## [0.9.1] - 2026-11-20
 
 ### Fixed

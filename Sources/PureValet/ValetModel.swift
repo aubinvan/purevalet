@@ -83,6 +83,8 @@ final class ValetModel {
     var rootless = false
     /// One-time admin setup state for rootless mode.
     var rootlessSetup = RootlessSetup.Status()
+    /// Administrator accounts of this Mac (for the setup hint).
+    var adminAccounts: [String] = []
     /// Valet's files, located from the installed `valet` binary.
     private(set) var files = ValetFiles()
 
@@ -267,6 +269,7 @@ final class ValetModel {
                 }
                 running = RootlessRuntime.shared.isRunning
                 rootlessSetup = await RootlessSetup.status(files: files, formulas: phpFormulas)
+                if !rootlessSetup.ready { adminAccounts = await RootlessSetup.adminAccounts() }
             } else {
                 // `valet status` needs sudo in Valet 4.13+: without `valet trust` it fails even when
                 // Valet runs. The process list is checked too, so the state is right either way.

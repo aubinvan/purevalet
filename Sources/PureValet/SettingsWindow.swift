@@ -290,6 +290,10 @@ struct RootlessSection: View {
             if !model.rootlessSetup.ready {
                 Text("A one-time setup needs an administrator account (macOS asks for its name and password): it points `.\(model.tld)` to PureValet's DNS, removes Valet's root services and trusts Valet's HTTPS certificate authority.")
                     .settingsCaption()
+                if !model.adminAccounts.isEmpty {
+                    Label("In the macOS dialog, replace your name with an administrator account: \(model.adminAccounts.joined(separator: ", "))", systemImage: "person.crop.circle.badge.exclamationmark")
+                        .font(.caption.bold())
+                }
                 if !model.rootlessSetup.resolverReady {
                     Label("The .\(model.tld) DNS still points to Valet's root service", systemImage: "xmark.circle").font(.caption)
                 }

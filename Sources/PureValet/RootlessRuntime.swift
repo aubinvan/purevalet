@@ -291,13 +291,46 @@ enum RootlessSetup {
         return names.flatMap { ["homebrew.mxcl.\($0)", "sh.brew.\($0)"] }
     }
 
+    /// `pkill -f` takes an extended regular expression: escape the special characters of a literal.
+    nonisolated static func regexEscaped(_ text: String) -> String {
+        var out = ""
+        for c in text {
+            if "\\^$.|?*+()[]{}".contains(c) { out.append("\\") }
+            out.append(c)
+        }
+        return out
+    }
+
+    /// Names of this Mac's administrator accounts (shown so the user knows which one to type).
+    static func adminAccounts() async -> [String] {
+        let out = await Shell.run("/usr/bin/dscl", [".", "-read", "/Groups/admin", "GroupMembership"]).output
+        return out.replacingOccurrences(of: "GroupMembership:", with: "")
+            .split(separator: " ").map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty && $0 != "root" && !$0.hasPrefix("_") }
+    }
+
+    /// Turns an `osascript` failure into a clear explanation.
+    nonisolated static func explain(_ result: CommandResult) -> CommandResult {
+        guard !result.succeeded else { return result }
+        let o = result.output
+        let message: String
+        if o.contains("-128") {
+            message = String(localized: "Setup cancelled.")
+        } else if o.contains("-60007") || o.contains("-60005") || o.lowercased().contains("password") {
+            message = String(localized: "The administrator name or password was refused. Type the name of an administrator account (not your standard account) and its password.")
+        } else {
+            message = o
+        }
+        return CommandResult(status: result.status, output: message + "\n\n" + o)
+    }
+
     /// The shell script run once as root. Pure, so it can be tested and reviewed.
     nonisolated static func script(user: String, home: String, tld: String, labels: [String], caPem: String) -> String {
         func quoted(_ text: String) -> String { "'" + text.replacingOccurrences(of: "'", with: "'\\''") + "'" }
         let services = labels.map(quoted).joined(separator: " ")
         return """
         for l in \(services); do launchctl bootout system/"$l" 2>/dev/null; rm -f /Library/LaunchDaemons/"$l".plist; done
-        \(leftoverPatterns.map { "pkill -f \(quoted($0)) 2>/dev/null" }.joined(separator: "\n"))
+        \(leftoverPatterns.map { "pkill -f \(quoted(regexEscaped($0))) 2>/dev/null" }.joined(separator: "\n"))
         mkdir -p /etc/resolver
         printf 'nameserver 127.0.0.1\\nport \(RootlessRuntime.dnsPort)\\n' > /etc/resolver/\(quoted(tld))
         chown -R \(quoted(user)):staff \(quoted("\(home)/.config/valet"))
@@ -314,8 +347,8 @@ enum RootlessSetup {
         func appleScriptString(_ text: String) -> String {
             "\"" + text.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\""
         }
-        let prompt = String(localized: "PureValet needs an administrator account once, to let Valet run without administrator rights.")
+        let prompt = String(localized: "PureValet needs an administrator account once. Replace the name with an administrator account (not your standard account) and type its password.")
         let apple = "do shell script \(appleScriptString(script)) with prompt \(appleScriptString(prompt)) with administrator privileges"
-        return await Shell.run("/usr/bin/osascript", ["-e", apple])
+        return explain(await Shell.run("/usr/bin/osascript", ["-e", apple]))
     }
 }
