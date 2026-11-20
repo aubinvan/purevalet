@@ -198,20 +198,24 @@ struct GeneralPane: View {
                     Text("PHP")
                 }
 
-                Section {
-                    HStack {
-                        Label("Password-free commands", systemImage: "key")
-                        Spacer()
-                        if model.trusted {
-                            Text("Enabled").foregroundStyle(.secondary)
-                        } else {
-                            Button("Enable…") { Task { await model.trust() } }
+                if model.rootless {
+                    RootlessSection()
+                } else {
+                    Section {
+                        HStack {
+                            Label("Password-free commands", systemImage: "key")
+                            Spacer()
+                            if model.trusted {
+                                Text("Enabled").foregroundStyle(.secondary)
+                            } else {
+                                Button("Enable…") { Task { await model.trust() } }
+                            }
                         }
+                        Text("Runs `valet trust` once: adds sudoers rules for `valet` and `brew` so Start, Stop and Secure no longer ask for your password.")
+                            .settingsCaption()
+                    } header: {
+                        Text("Administrator password")
                     }
-                    Text("Runs `valet trust` once: adds sudoers rules for `valet` and `brew` so Start, Stop and Secure no longer ask for your password.")
-                        .settingsCaption()
-                } header: {
-                    Text("Administrator password")
                 }
             }
 
@@ -262,6 +266,45 @@ struct GeneralPane: View {
         case .some(true): return String(localized: "Running")
         case .some(false): return String(localized: "Stopped")
         case .none: return "…"
+        }
+    }
+}
+
+struct RootlessSection: View {
+    @Environment(ValetModel.self) private var model
+
+    var body: some View {
+        Section {
+            HStack {
+                Label("No-admin mode", systemImage: "person.badge.shield.checkmark")
+                Spacer()
+                if model.rootlessSetup.ready {
+                    Text("Ready").foregroundStyle(.secondary)
+                } else {
+                    Button("Set Up Once…") { Task { await model.runRootlessSetup() } }
+                        .buttonStyle(.borderedProminent)
+                }
+            }
+            Text("Your macOS account is a standard account, so PureValet runs nginx, PHP and dnsmasq itself, under your account: no administrator password, ever. Only this Mac can reach your sites.")
+                .settingsCaption()
+            if !model.rootlessSetup.ready {
+                Text("A one-time setup needs an administrator account (macOS asks for its name and password): it points `.\(model.tld)` to PureValet's DNS, removes Valet's root services and trusts Valet's HTTPS certificate authority.")
+                    .settingsCaption()
+                if !model.rootlessSetup.resolverReady {
+                    Label("The .\(model.tld) DNS still points to Valet's root service", systemImage: "xmark.circle").font(.caption)
+                }
+                if !model.rootlessSetup.rootServices.isEmpty {
+                    Label("Valet's root services are still registered at startup", systemImage: "xmark.circle").font(.caption)
+                }
+                if model.rootlessSetup.leftoverRootProcesses {
+                    Label("Old Valet services still run as root in the background", systemImage: "xmark.circle").font(.caption)
+                }
+                if !model.rootlessSetup.caTrusted {
+                    Label("Valet's certificate authority is not trusted yet", systemImage: "xmark.circle").font(.caption)
+                }
+            }
+        } header: {
+            Text("Standard account")
         }
     }
 }

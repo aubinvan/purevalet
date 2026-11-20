@@ -130,6 +130,16 @@ Dans **Réglages → Général → Application** :
 
 Pourquoi c’est important : `valet start` enregistre nginx, PHP-FPM et dnsmasq auprès de launchd. Sans PureValet, ils continueraient de tourner et redémarreraient à chaque démarrage du Mac. Quitter PureValet les arrête et les désenregistre. MariaDB est démarrée avec `brew services run`, qui ne l’enregistre jamais à la connexion.
 
+## Comptes macOS standard (sans droits admin)
+
+Valet a normalement besoin de `sudo`. Si votre compte macOS est un **compte standard** (recommandé pour la sécurité, avec un compte admin séparé), PureValet passe automatiquement en **mode sans admin** :
+
+- il lance lui-même nginx, PHP-FPM et dnsmasq **sous votre compte**, à partir des fichiers de Valet : jamais de mot de passe administrateur ;
+- seul votre Mac peut accéder à vos sites (sans root, nginx doit écouter sur toutes les interfaces, il refuse donc toute autre adresse) ;
+- quitter PureValet arrête tout, comme d’habitude.
+
+Une **configuration unique** nécessite un compte administrateur : *Réglages → Général → Compte standard → Configurer une fois…* (macOS demande le nom et le mot de passe admin). Elle dirige `.test` vers le DNS de PureValet, retire les services root de Valet et approuve l’autorité de certification HTTPS de Valet. Ensuite, l’usage quotidien ne demande plus aucun droit admin.
+
 ## Mot de passe administrateur (`sudo`)
 
 Valet relance certaines commandes avec `sudo` (start, stop, use, secure, isolate…). L’appli n’a pas de terminal : elle fournit à `sudo` un *askpass*, une boîte de dialogue macOS standard. Le mot de passe va directement à `sudo`, PureValet ne le lit ni ne le garde.

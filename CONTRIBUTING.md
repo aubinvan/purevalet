@@ -51,6 +51,7 @@ Other useful commands:
 | `build/PureValet.app/Contents/MacOS/PureValet --snapshot /tmp/snap` | Render the settings window, one PNG per tab (the menu bar menu cannot be captured this way) |
 | `build/PureValet.app/Contents/MacOS/PureValet -AppleLanguages '(fr)'` | Run in another language |
 | `build/PureValet.app/Contents/MacOS/PureValet --install-phpmyadmin` | Run the phpMyAdmin installer without the UI |
+| `build/PureValet.app/Contents/MacOS/PureValet --rootless-selftest` | On a standard account: start the no-admin services, check every site, stop |
 
 Quit any installed PureValet before running your build: both share the bundle identifier.
 
@@ -78,6 +79,8 @@ Quit any installed PureValet before running your build: both share the bundle id
 | `Sources/PureValet/MenuContent.swift` | Native menu bar menu |
 | `Sources/PureValet/SettingsWindow.swift` | Settings window: sidebar + General / Sites / Proxies / About |
 | `Sources/PureValet/ValetModel.swift` | State, detection, parsing of Valet's output, actions |
+| `Sources/PureValet/ValetFiles.swift` | Reads/writes Valet's files (`~/.config/valet`) with Valet's stubs: sites, certificates, isolation, proxies |
+| `Sources/PureValet/RootlessRuntime.swift` | No-admin mode: generated configs, nginx / PHP-FPM / dnsmasq as child processes, one-time admin setup |
 | `Sources/PureValet/Shell.swift` | Runs commands with an explicit `PATH` and the `sudo` askpass helper |
 | `Sources/PureValet/PhpMyAdmin.swift` | Built-in phpMyAdmin: release feed, download + SHA-256, config |
 | `Sources/PureValet/Updater.swift` | Daily GitHub release check |

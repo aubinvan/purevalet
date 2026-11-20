@@ -10,6 +10,24 @@ struct PureValetApp: App {
         Preferences.register()
         // `PureValet --snapshot <folder>`: captures the settings window (one PNG per tab), then quits.
         let args = CommandLine.arguments
+        // `PureValet --rootless-selftest`: starts the services like the Start button, checks every site, stops, quits.
+        if args.contains("--rootless-selftest") {
+            Snapshot.isActive = true
+            Task { @MainActor in
+                let model = ValetModel()
+                await model.refresh()
+                print("rootless: \(model.rootless), setup ready: \(model.rootlessSetup.ready) \(model.rootlessSetup)")
+                await model.start()
+                print("start: \(model.lastMessage ?? "-")\n\(model.lastOutput)")
+                print("running: \(model.running == true)")
+                for site in model.sites {
+                    print("  \(model.dot(for: site) == .ok ? "OK " : "KO ") \(model.displayURL(site))  \(site.php)")
+                }
+                await model.stop()
+                print("stopped: \(RootlessRuntime.shared.isRunning == false)")
+                exit(model.running == false ? 0 : 1)
+            }
+        }
         // `PureValet --install-phpmyadmin`: runs the built-in phpMyAdmin installer headlessly, prints the result, quits.
         if args.contains("--install-phpmyadmin") {
             Snapshot.isActive = true

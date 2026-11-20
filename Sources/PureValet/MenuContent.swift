@@ -15,6 +15,11 @@ struct MenuContent: View {
             }
         }
 
+        if model.isInstalled && model.rootless && !model.rootlessSetup.ready {
+            Button("Finish Setup (Admin, Once)…") { Task { await model.runRootlessSetup() } }
+            Divider()
+        }
+
         if model.isInstalled || model.mariadbInstalled {
             if model.anyServiceStopped {
                 Button("Start All Services") { Task { await model.startAll() } }

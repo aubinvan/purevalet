@@ -136,6 +136,16 @@ In **Settings → General → App**:
 
 Why it matters: `valet start` registers nginx, PHP-FPM and dnsmasq with launchd, so without PureValet they would keep running and restart at every boot. Quitting PureValet stops and unregisters them. MariaDB is started with `brew services run`, which never registers it at login.
 
+## Standard (non-admin) macOS accounts
+
+Valet normally needs `sudo`. If your macOS account is a **standard account** (recommended for security, with a separate admin account), PureValet switches to a **no-admin mode** automatically:
+
+- it runs nginx, PHP-FPM and dnsmasq **itself, under your account**, using Valet's own files: no administrator password, ever;
+- only your Mac can reach your sites (nginx must listen on all interfaces without root, so it refuses every other address);
+- quitting PureValet stops everything, as usual.
+
+A **one-time setup** needs an administrator account: *Settings → General → Standard account → Set Up Once…* (macOS asks for the admin name and password). It points `.test` to PureValet's DNS, removes Valet's root services and trusts Valet's HTTPS certificate authority. Install Valet itself from the admin account or with `valet install` as an admin once; daily use then needs no admin at all.
+
 ## Administrator password (`sudo`)
 
 Valet re-runs some commands with `sudo` (start, stop, use, secure, isolate…). The app has no terminal, so it gives `sudo` an *askpass* helper: a standard macOS dialog asks for your password, which goes straight to `sudo` (PureValet never reads or stores it).

@@ -127,6 +127,75 @@ final class ParsingTests: XCTestCase {
         XCTAssertNotEqual(a, b)
     }
 
+    func testRootlessRewriteListensOnAllInterfacesWithUserLog() {
+        let conf = """
+        server {
+            listen 127.0.0.1:80 default_server;
+            listen [::1]:80 default_server;
+            #listen 127.0.0.1:80; # valet loopback
+            listen 127.0.0.1:443 ssl;
+            error_log "/Users/a/.config/valet/Log/nginx-error.log";
+        }
+        """
+        let out = RootlessRuntime.rootless(conf, errorLog: "/tmp/rt/nginx-error.log")
+        XCTAssertTrue(out.contains("listen 80 default_server;"))
+        XCTAssertTrue(out.contains("listen [::]:80 default_server;"))
+        XCTAssertTrue(out.contains("listen 443 ssl;"))
+        XCTAssertTrue(out.contains("#listen 127.0.0.1:80; # valet loopback"), "comments stay untouched")
+        XCTAssertTrue(out.contains(#"error_log "/tmp/rt/nginx-error.log";"#))
+        XCTAssertFalse(out.contains("listen 127.0.0.1:443"))
+    }
+
+    func testValetFilesParsesIsolationProxyAndSockets() {
+        XCTAssertEqual(ValetFiles.isolatedVersion("# ISOLATED_PHP_VERSION=php@8.3\nserver {}"), "php@8.3")
+        XCTAssertNil(ValetFiles.isolatedVersion("server {}"))
+        XCTAssertEqual(ValetFiles.proxyHost("location / { proxy_pass http://127.0.0.1:5173; }"), "http://127.0.0.1:5173")
+        XCTAssertEqual(ValetFiles.socketName("php@8.3"), "valet83.sock")
+        let isolated = ValetFiles.withSocket("# ISOLATED_PHP_VERSION=php@8.4\nfastcgi_pass unix:/x/valet84.sock;", version: "php@8.3")
+        XCTAssertTrue(isolated.hasPrefix("# ISOLATED_PHP_VERSION=php@8.3\n"))
+        XCTAssertTrue(isolated.contains("valet83.sock"))
+        XCTAssertEqual(isolated.components(separatedBy: "ISOLATED_PHP_VERSION").count, 2, "a single marker")
+    }
+
+    func testValetFilesReadsSitesFromDisk() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("pv-\(UUID().uuidString)")
+        let home = root.appendingPathComponent("valet").path
+        let projects = root.appendingPathComponent("projects").path
+        let fm = FileManager.default
+        for dir in ["\(home)/Sites", "\(home)/Nginx", "\(home)/Certificates", "\(projects)/shop", "\(projects)/blog"] {
+            try fm.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        }
+        defer { try? fm.removeItem(at: root) }
+        try #"{"tld":"test","paths":["\#(home)/Sites","\#(projects)"]}"#.write(toFile: "\(home)/config.json", atomically: true, encoding: .utf8)
+        try fm.createSymbolicLink(atPath: "\(home)/Sites/api", withDestinationPath: "/srv/api")
+        try "".write(toFile: "\(home)/Certificates/api.test.crt", atomically: true, encoding: .utf8)
+        try "# ISOLATED_PHP_VERSION=php@8.3\nserver {}".write(toFile: "\(home)/Nginx/api.test", atomically: true, encoding: .utf8)
+        try "server { location / { proxy_pass http://127.0.0.1:3000; } }".write(toFile: "\(home)/Nginx/vite.test", atomically: true, encoding: .utf8)
+
+        let files = ValetFiles(home: home, valetPackage: "/nowhere")
+        let sites = files.sites(globalPHP: "php@8.5")
+        XCTAssertEqual(sites.map(\.name), ["api", "blog", "shop"])
+        XCTAssertEqual(sites[0], ValetSite(name: "api", secured: true, url: "https://api.test", path: "/srv/api", php: "php@8.3"))
+        XCTAssertTrue(sites[1].parked)
+        XCTAssertEqual(sites[1].php, "php@8.5")
+        XCTAssertEqual(files.proxies().map(\.host), ["http://127.0.0.1:3000"])
+        XCTAssertEqual(files.parkedPaths, [projects])
+        XCTAssertEqual(files.isolatedVersions(), ["8.3"])
+    }
+
+    func testRootlessSetupScript() {
+        let script = RootlessSetup.script(user: "ana", home: "/Users/ana", tld: "test",
+                                          labels: ["homebrew.mxcl.nginx"], caPem: "/Users/ana/.config/valet/CA/ca.pem")
+        XCTAssertTrue(script.contains("launchctl bootout system/\"$l\""))
+        XCTAssertTrue(script.contains("port 1053"))
+        XCTAssertTrue(script.contains("> /etc/resolver/'test'"))
+        XCTAssertTrue(script.contains("chown -R 'ana':staff '/Users/ana/.config/valet'"))
+        XCTAssertTrue(script.contains("add-trusted-cert -d -r trustRoot"))
+        XCTAssertTrue(script.contains("pkill -f 'dnsmasq --keep-in-foreground"))
+        let tricky = RootlessSetup.script(user: "o'neil", home: "/Users/o'neil", tld: "test", labels: [], caPem: "/x")
+        XCTAssertTrue(tricky.contains("'o'\\''neil'"), "single quotes are escaped")
+    }
+
     func testSlug() {
         XCTAssertEqual(ValetModel.slug("Mon Projet_2"), "mon-projet-2")
     }

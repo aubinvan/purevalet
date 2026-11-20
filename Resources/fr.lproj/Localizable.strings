@@ -187,3 +187,20 @@
 "The phpMyAdmin download failed." = "Le téléchargement de phpMyAdmin a échoué.";
 "The downloaded phpMyAdmin archive does not match its official SHA-256 checksum." = "L’archive phpMyAdmin téléchargée ne correspond pas à son empreinte SHA-256 officielle.";
 "The phpMyAdmin archive could not be unpacked." = "L’archive phpMyAdmin n’a pas pu être décompressée.";
+
+/* No-admin (rootless) mode */
+"Standard account" = "Compte standard";
+"No-admin mode" = "Mode sans admin";
+"Ready" = "Prêt";
+"Set Up Once…" = "Configurer une fois…";
+"Finish Setup (Admin, Once)…" = "Terminer la configuration (admin, une fois)…";
+"Setting up the no-admin mode" = "Configuration du mode sans admin";
+"Your macOS account is a standard account, so PureValet runs nginx, PHP and dnsmasq itself, under your account: no administrator password, ever. Only this Mac can reach your sites." = "Votre compte macOS est un compte standard : PureValet lance lui-même nginx, PHP et dnsmasq sous votre compte, sans jamais demander de mot de passe administrateur. Seul ce Mac peut accéder à vos sites.";
+"A one-time setup needs an administrator account (macOS asks for its name and password): it points `.%@` to PureValet's DNS, removes Valet's root services and trusts Valet's HTTPS certificate authority." = "Une configuration unique nécessite un compte administrateur (macOS demande son nom et son mot de passe) : elle dirige `.%@` vers le DNS de PureValet, retire les services root de Valet et approuve l’autorité de certification HTTPS de Valet.";
+"The .%@ DNS still points to Valet's root service" = "Le DNS .%@ pointe encore vers le service root de Valet";
+"Valet's root services are still registered at startup" = "Les services root de Valet sont encore enregistrés au démarrage";
+"Valet's certificate authority is not trusted yet" = "L’autorité de certification de Valet n’est pas encore approuvée";
+"PureValet needs an administrator account once, to let Valet run without administrator rights." = "PureValet a besoin d’un compte administrateur une seule fois, pour que Valet fonctionne ensuite sans droits administrateur.";
+"No Homebrew PHP found for the global version." = "Aucun PHP Homebrew trouvé pour la version globale.";
+"The services did not start in time." = "Les services n’ont pas démarré à temps.";
+"Old Valet services still run as root in the background" = "D’anciens services de Valet tournent encore en root en arrière-plan";

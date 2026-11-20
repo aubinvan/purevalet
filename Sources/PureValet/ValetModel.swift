@@ -79,6 +79,13 @@ final class ValetModel {
     var mariadbInstalled = false
     var mariadbRunning: Bool?
     var yerdDetected = false
+    /// Standard (non-admin) account: PureValet runs the services itself (see `RootlessRuntime`).
+    var rootless = false
+    /// One-time admin setup state for rootless mode.
+    var rootlessSetup = RootlessSetup.Status()
+    /// Valet's files, located from the installed `valet` binary.
+    private(set) var files = ValetFiles()
+
     /// Version of the phpMyAdmin copy managed by PureValet, nil if not installed.
     var phpMyAdminVersion: String?
     /// Latest phpMyAdmin release, fetched when the settings window opens.
@@ -250,30 +257,34 @@ final class ValetModel {
 
         if let binary = Self.locateValet() {
             install = .installed(binary: binary)
-            tld = Self.readTLD()
-            async let status = Shell.run(binary, ["status"])
-            // `valet status` needs sudo in Valet 4.13+: without `valet trust` it fails even when
-            // Valet runs. The process list is checked too, so the state is right either way.
-            async let processes = Shell.run("/bin/ps", ["-axo", "comm="])
-            async let links = Shell.run(binary, ["links"])
-            async let parked = Shell.run(binary, ["parked"])
-            async let proxiesOut = Shell.run(binary, ["proxies"])
-            async let paths = Shell.run(binary, ["paths"])
-            // The Valet version never changes while the app runs: ask once.
-            async let version = valetVersion == nil ? Shell.run(binary, ["--version"]) : nil
-            let (s, l, pk, p, pa, v, ps) = await (status, links, parked, proxiesOut, paths, version, processes)
-            running = s.succeeded || Self.valetServicesRunning(ps.output)
-            // A failed command (e.g. two `valet` runs racing) keeps the last known list instead of emptying it.
-            if l.succeeded && pk.succeeded {
-                let linked = Self.parseSites(l.output)
-                let linkedNames = Set(linked.map(\.name))
-                sites = linked + Self.parseSites(pk.output, parked: true).filter { !linkedNames.contains($0.name) }
+            files = ValetFiles(valetPackage: URL(fileURLWithPath: binary).resolvingSymlinksInPath().deletingLastPathComponent().path)
+            tld = files.tld
+            rootless = !(await Self.isAdmin())
+            if rootless {
+                // Standard account: PureValet runs the services itself; the global PHP is the one valet.sock points to.
+                if let version = files.globalSocketVersion, let formula = phpFormulas.first(where: { $0.version == version }) {
+                    globalPHP = formula.formula
+                }
+                running = RootlessRuntime.shared.isRunning
+                rootlessSetup = await RootlessSetup.status(files: files, formulas: phpFormulas)
+            } else {
+                // `valet status` needs sudo in Valet 4.13+: without `valet trust` it fails even when
+                // Valet runs. The process list is checked too, so the state is right either way.
+                async let status = Shell.run(binary, ["status"])
+                async let processes = Shell.run("/bin/ps", ["-axo", "comm="])
+                let (s, ps) = await (status, processes)
+                running = s.succeeded || Self.valetServicesRunning(ps.output)
             }
-            if p.succeeded { proxies = Self.parseProxies(p.output) }
-            if pa.succeeded {
-                parkedPaths = Self.userParkedPaths(Self.parsePaths(pa.output), configDir: Self.valetConfigDir)
+            // Read Valet's files directly: `valet links/parked/proxies` run sudo internally, which fails
+            // on a standard account and needs a cached password otherwise.
+            sites = files.sites(globalPHP: globalPHPVersion.map { "php@\($0)" })
+            proxies = files.proxies()
+            parkedPaths = files.parkedPaths
+            // The Valet version never changes while the app runs: ask once (read-only, no sudo).
+            if valetVersion == nil {
+                let v = await Shell.run(binary, ["--version"])
+                if v.succeeded { valetVersion = Self.parseValetVersion(v.output) }
             }
-            if let v, v.succeeded { valetVersion = Self.parseValetVersion(v.output) }
         } else {
             install = .notInstalled
             running = nil
@@ -306,6 +317,17 @@ final class ValetModel {
               let array = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]],
               let first = array.first else { return nil }
         return first["running"] as? Bool
+    }
+
+    /// Whether the current macOS user is an administrator (Valet needs sudo otherwise).
+    static func isAdmin() async -> Bool {
+        let result = await Shell.run("/usr/sbin/dsmemberutil", ["checkmembership", "-U", NSUserName(), "-G", "admin"])
+        return result.output.contains("is a member")
+    }
+
+    /// Global PHP version (`8.5`): the formula Homebrew links, or in rootless mode the one valet.sock uses.
+    var globalPHPVersion: String? {
+        phpFormulas.first { $0.formula == globalPHP }?.version
     }
 
     // MARK: - Site health
@@ -441,12 +463,79 @@ final class ValetModel {
         await execute(label) { await Shell.run(binary, args, cwd: cwd, allowSudoPrompt: true) }
     }
 
+    /// A site change: through `valet` on an admin account, or directly on Valet's files then a
+    /// config reload in rootless mode (no sudo at all).
+    private func change(_ label: String, valet args: [String], cwd: URL? = nil,
+                        rootless work: @escaping () async throws -> Void) async {
+        guard rootless else {
+            await valet(label, args, cwd: cwd)
+            return
+        }
+        guard busyLabel == nil else { return }
+        busyLabel = label
+        var result = CommandResult(status: 0, output: "")
+        do {
+            try await work()
+            try await reloadRootless()
+        } catch {
+            result = CommandResult(status: 1, output: error.localizedDescription)
+        }
+        busyLabel = nil
+        report(label, result)
+        await refresh()
+    }
+
+    private func reloadRootless() async throws {
+        guard let version = files.globalSocketVersion ?? globalPHPVersion else { return }
+        try await RootlessRuntime.shared.reload(files: files, globalVersion: version, formulas: phpFormulas)
+    }
+
+    /// `php` → `php@8.5`, `php@8.3` → `php@8.3` (the form Valet writes in its files).
+    private func versionedFormula(_ formula: String) -> String {
+        if formula.hasPrefix("php@") { return formula }
+        return phpFormulas.first { $0.formula == formula }.map { "php@\($0.version)" } ?? formula
+    }
+
+    /// Rootless start/stop of nginx, PHP-FPM and dnsmasq.
+    private func runRootless(_ label: String, start: Bool) async {
+        guard busyLabel == nil else { return }
+        busyLabel = label
+        var result = CommandResult(status: 0, output: "")
+        if start {
+            do {
+                guard let version = files.globalSocketVersion ?? globalPHPVersion else {
+                    throw RootlessError.start(String(localized: "No Homebrew PHP found for the global version."))
+                }
+                try await RootlessRuntime.shared.start(files: files, globalVersion: version, formulas: phpFormulas)
+            } catch {
+                result = CommandResult(status: 1, output: error.localizedDescription)
+            }
+        } else {
+            await RootlessRuntime.shared.stop()
+        }
+        busyLabel = nil
+        report(label, result)
+        await refresh()
+    }
+
+    /// One-time setup with an administrator account (macOS asks for the admin name and password).
+    func runRootlessSetup() async {
+        guard busyLabel == nil else { return }
+        let label = String(localized: "Setting up the no-admin mode")
+        busyLabel = label
+        try? await files.ensureCA()
+        let result = await RootlessSetup.run(files: files, formulas: phpFormulas)
+        busyLabel = nil
+        report(label, result)
+        await refresh()
+    }
+
     private static let dontOfferTrustKey = "dontOfferValetTrust"
 
     /// Without `valet trust`, every Valet action asks for the password. Instead of that, offer once
     /// to run `valet trust`: one last password, then no more prompts.
     private func offerTrustIfNeeded(binary: String) async {
-        guard !trusted, !Snapshot.isActive,
+        guard !trusted, !rootless, !Snapshot.isActive,
               !UserDefaults.standard.bool(forKey: Self.dontOfferTrustKey) else { return }
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
@@ -493,30 +582,53 @@ final class ValetModel {
         return o.contains("sudo:") && (o.contains("password") || o.contains("askpass") || o.contains("terminal"))
     }
 
-    func start() async { await valet(String(localized: "Starting Valet"), ["start"]) }
-    func stop() async { await valet(String(localized: "Stopping Valet"), ["stop"]) }
-    func restart() async { await valet(String(localized: "Restarting Valet"), ["restart"]) }
+    func start() async {
+        if rootless { await runRootless(String(localized: "Starting Valet"), start: true) } else { await valet(String(localized: "Starting Valet"), ["start"]) }
+    }
+
+    func stop() async {
+        if rootless { await runRootless(String(localized: "Stopping Valet"), start: false) } else { await valet(String(localized: "Stopping Valet"), ["stop"]) }
+    }
+
+    func restart() async {
+        if rootless { await runRootless(String(localized: "Restarting Valet"), start: true) } else { await valet(String(localized: "Restarting Valet"), ["restart"]) }
+    }
     func trust() async { await valet(String(localized: "Enabling password-free commands"), ["trust"]) }
 
     func useGlobalPHP(_ formula: String) async {
-        await valet(String(localized: "Global PHP → \(formula)"), ["use", formula])
+        let version = phpFormulas.first { $0.formula == formula }?.version
+        await change(String(localized: "Global PHP → \(formula)"), valet: ["use", formula]) { [files] in
+            guard let version else { return }
+            let link = "\(files.home)/valet.sock"
+            try? FileManager.default.removeItem(atPath: link)
+            try FileManager.default.createSymbolicLink(atPath: link, withDestinationPath: "\(files.home)/\(ValetFiles.socketName(version))")
+        }
     }
 
     func isolate(_ site: ValetSite, formula: String) async {
-        await valet("\(site.name) → \(formula)", ["isolate", formula, "--site=\(site.name)"])
+        let versioned = versionedFormula(formula)
+        await change("\(site.name) → \(formula)", valet: ["isolate", formula, "--site=\(site.name)"]) { [files] in
+            try files.isolate(site.name, version: versioned)
+        }
     }
 
     func unisolate(_ site: ValetSite) async {
-        await valet(String(localized: "\(site.name) → global PHP"), ["unisolate", "--site=\(site.name)"])
+        await change(String(localized: "\(site.name) → global PHP"), valet: ["unisolate", "--site=\(site.name)"]) { [files] in
+            try files.unisolate(site.name)
+        }
     }
 
     func setSecure(_ site: ValetSite, _ secure: Bool) async {
         let label = secure ? String(localized: "HTTPS for \(site.name)") : String(localized: "HTTP for \(site.name)")
-        await valet(label, [secure ? "secure" : "unsecure", site.name])
+        await change(label, valet: [secure ? "secure" : "unsecure", site.name]) { [files] in
+            if secure { try await files.secure(site.name) } else { try files.unsecure(site.name) }
+        }
     }
 
     func unlink(_ site: ValetSite) async {
-        await valet(String(localized: "Unlink \(site.name)"), ["unlink", site.name])
+        await change(String(localized: "Unlink \(site.name)"), valet: ["unlink", site.name]) { [files] in
+            try files.unlink(site.name)
+        }
     }
 
     private func chooseFolder(prompt: String, message: String) -> URL? {
@@ -534,18 +646,24 @@ final class ValetModel {
     func chooseAndLinkFolder() async {
         guard let folder = chooseFolder(prompt: String(localized: "Link"), message: String(localized: "Choose the site folder to link to Valet")) else { return }
         let name = Self.slug(folder.lastPathComponent)
-        await valet(String(localized: "Link \(name)"), ["link", name], cwd: folder)
+        await change(String(localized: "Link \(name)"), valet: ["link", name], cwd: folder) { [files] in
+            try files.link(name, to: folder.path)
+        }
     }
 
     /// Asks for a folder, then runs `valet park` inside it: each subfolder becomes a site.
     func chooseAndParkFolder() async {
         guard let folder = chooseFolder(prompt: String(localized: "Park"), message: String(localized: "Choose a folder: each subfolder will be served as a site")) else { return }
-        await valet(String(localized: "Park \(folder.lastPathComponent)"), ["park"], cwd: folder)
+        await change(String(localized: "Park \(folder.lastPathComponent)"), valet: ["park"], cwd: folder) { [files] in
+            try files.park(folder.path)
+        }
     }
 
     func forget(_ path: String) async {
         let name = URL(fileURLWithPath: path).lastPathComponent
-        await valet(String(localized: "Forget \(name)"), ["forget", path])
+        await change(String(localized: "Forget \(name)"), valet: ["forget", path]) { [files] in
+            try files.forget(path)
+        }
     }
 
     func addProxy(name: String, port: Int, secure: Bool) async {
@@ -556,11 +674,15 @@ final class ValetModel {
         }
         var args = ["proxy", site, "http://127.0.0.1:\(port)"]
         if secure { args.append("--secure") }
-        await valet("Proxy \(site) → :\(port)", args)
+        await change("Proxy \(site) → :\(port)", valet: args) { [files] in
+            try await files.proxy(site, host: "http://127.0.0.1:\(port)", secure: secure)
+        }
     }
 
     func unproxy(_ proxy: ValetProxy) async {
-        await valet("Unproxy \(proxy.name)", ["unproxy", proxy.name])
+        await change("Unproxy \(proxy.name)", valet: ["unproxy", proxy.name]) { [files] in
+            try files.unproxy(proxy.name)
+        }
     }
 
     func setMariaDB(_ start: Bool) async {
@@ -591,7 +713,9 @@ final class ValetModel {
     /// Ignores the busy flag on purpose: quitting must always proceed.
     func stopEverythingForQuit() async {
         await refresh()
-        if case let .installed(binary) = install, running == true {
+        if rootless {
+            await RootlessRuntime.shared.stop()
+        } else if case let .installed(binary) = install, running == true {
             _ = await Shell.run(binary, ["stop"], allowSudoPrompt: true)
         }
         if mariadbInstalled, mariadbRunning == true {
@@ -637,6 +761,19 @@ final class ValetModel {
             }
             if phpMyAdminSite?.secured != true {
                 steps.append(["secure", PhpMyAdmin.siteName])
+            }
+            if rootless {
+                for args in steps {
+                    switch args[0] {
+                    case "link": try files.link(PhpMyAdmin.siteName, to: PhpMyAdmin.directory.path)
+                    case "isolate": try files.isolate(PhpMyAdmin.siteName, version: versionedFormula(args[1]))
+                    case "secure": try await files.secure(PhpMyAdmin.siteName)
+                    default: break
+                    }
+                    output.append("✓ \(args.joined(separator: " "))")
+                }
+                try await reloadRootless()
+                steps = []
             }
             for args in steps {
                 let step = await Shell.run(binary, args, cwd: PhpMyAdmin.directory, allowSudoPrompt: true)

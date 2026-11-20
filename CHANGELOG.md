@@ -5,6 +5,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-20
+
+### Added
+- **No-admin mode for standard macOS accounts.** When the user is not an administrator, PureValet runs nginx, PHP-FPM and dnsmasq itself, under the user's account, with configs generated from Valet's own files and stubs: no `sudo`, no password, ever. nginx listens on all interfaces (the only way without root) and only accepts connections from the Mac itself; dnsmasq answers on `127.0.0.1:1053`. The services are PureValet's child processes, so quitting stops them.
+- One-time setup for that mode, through the standard macOS administrator dialog: points `/etc/resolver/<tld>` to the rootless DNS, removes Valet's root services and leftover root processes, trusts Valet's certificate authority.
+- In that mode, link, unlink, park, forget, secure (certificate signed by Valet's CA), isolate, global PHP and proxies are done directly on Valet's files.
+
+### Changed
+- Sites, parked folders and proxies are read from Valet's files instead of `valet links/parked/proxies`, which run `sudo` internally: lists no longer disappear when `sudo` is unavailable.
+
 ## [0.8.0] - 2026-11-20
 
 ### Added
