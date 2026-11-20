@@ -32,11 +32,13 @@ This writes one PNG per settings tab (`general.png`, `sites.png`, `proxies.png`,
 | --- | --- |
 | `Sources/PureValet/App.swift` | Entry point, `MenuBarExtra` (menu style), `AppDelegate` (start at launch, stop at quit), `--snapshot` mode |
 | `Sources/PureValet/MenuContent.swift` | Native menu bar menu |
+| `Sources/PureValet/Updater.swift` | Daily GitHub release check (no dependency) |
 | `Sources/PureValet/SettingsWindow.swift` | Settings window: sidebar + General / Sites / Proxies / About panes |
 | `Sources/PureValet/Shell.swift` | Runs commands with an explicit `PATH` and the `sudo` askpass helper |
 | `Sources/PureValet/ValetModel.swift` | Detection, parsing of Valet's tables, actions |
 | `scripts/make-icon.swift` | Builds `AppIcon.icns`, the menu bar template icon and `docs/icon.png` from `Resources/source/logo.png` |
 | `scripts/make-dmg.sh` | Builds the DMG and its SHA-256 |
+| `scripts/update-cask.sh` | Publishes the Homebrew cask for the current version |
 | `scripts/check-l10n.py` | Checks that every UI string has a French translation |
 | `Resources/*.lproj/Localizable.strings` | Translations (English keys) |
 
@@ -49,6 +51,14 @@ This writes one PNG per settings tab (`general.png`, `sites.png`, `proxies.png`,
 ```bash
 gh release create vX.Y.Z build/PureValet-X.Y.Z.dmg build/PureValet-X.Y.Z.dmg.sha256 --notes-file <notes>
 ```
+
+4. Update the Homebrew cask in [aubinvan/homebrew-tap](https://github.com/aubinvan/homebrew-tap) (checks the published DMG against the local SHA-256 first):
+
+```bash
+./scripts/update-cask.sh
+```
+
+Running apps pick up the new version through their daily update check.
 
 ## Localization
 

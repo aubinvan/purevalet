@@ -52,7 +52,7 @@ enum Preferences {
     static let stopOnQuitKey = "stopServicesOnQuit"
 
     static func register() {
-        UserDefaults.standard.register(defaults: [startOnLaunchKey: false, stopOnQuitKey: true])
+        UserDefaults.standard.register(defaults: [startOnLaunchKey: false, stopOnQuitKey: true, Updater.autoCheckKey: true])
     }
 
     static var startOnLaunch: Bool { UserDefaults.standard.bool(forKey: startOnLaunchKey) }
@@ -96,6 +96,7 @@ final class ValetModel {
                 guard let self else { return }
                 if let last = self.lastRefresh, Date().timeIntervalSince(last) < 3 { return }
                 Task { await self.refresh() }
+                Task { await Updater.shared.checkIfDue() }
             }
         }
         Task { await refresh() }

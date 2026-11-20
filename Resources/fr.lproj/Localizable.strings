@@ -134,8 +134,6 @@
 "Laravel Valet in your menu bar" = "Laravel Valet dans la barre de menus";
 "Open source (MIT)" = "Open source (MIT)";
 "View on GitHub" = "Voir sur GitHub";
-"New versions" = "Nouvelles versions";
-"Releases" = "Versions publiées";
 "Versions" = "Versions";
 "not installed" = "non installé";
 "Valet binary" = "Binaire Valet";
@@ -150,3 +148,18 @@
 "Start services when PureValet opens" = "Démarrer les services à l’ouverture de PureValet";
 "Stop all services when quitting" = "Arrêter tous les services en quittant";
 "Services are Valet (nginx, PHP-FPM, dnsmasq) and Homebrew MariaDB. When PureValet quits, they are stopped and unregistered, so nothing keeps running or restarts at boot. Enable password-free commands to quit without a password prompt." = "Les services sont Valet (nginx, PHP-FPM, dnsmasq) et MariaDB Homebrew. Quand PureValet quitte, ils sont arrêtés et désenregistrés : rien ne continue de tourner ni ne redémarre avec le Mac. Activez les commandes sans mot de passe pour quitter sans invite de mot de passe.";
+
+/* Updates */
+"Updates" = "Mises à jour";
+"Check for updates automatically" = "Rechercher les mises à jour automatiquement";
+"Check Now" = "Vérifier maintenant";
+"Version %@" = "Version %@";
+"Version %@ is available" = "La version %@ est disponible";
+"PureValet is up to date" = "PureValet est à jour";
+"Could not check for updates" = "Impossible de vérifier les mises à jour";
+"Release Notes" = "Notes de version";
+"Download" = "Télécharger";
+"Download PureValet %@…" = "Télécharger PureValet %@…";
+"All releases" = "Toutes les versions";
+"Homebrew users can update with `brew upgrade purevalet`." = "Avec Homebrew, mettez à jour avec `brew upgrade purevalet`.";
+"At most once a day, one request to GitHub. Nothing is downloaded or installed without you." = "Au plus une fois par jour, une seule requête à GitHub. Rien n’est téléchargé ni installé sans vous.";

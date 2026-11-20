@@ -40,7 +40,7 @@ Inspired by [Hex](https://hex.audio): a plain native menu for everyday actions, 
   - *General*: status, Valet CLI version, domain, logs and configuration folders, global PHP, password-free commands, MariaDB, app behaviour (start at launch, stop at quit, open at login).
   - *Sites*: linked and parked sites, HTTPS, per-site PHP, copy URL, Finder, Terminal, unlink; parked folders (park / forget).
   - *Proxies*: list, add, remove.
-  - *About*: versions of PureValet, Valet, PHP, nginx, dnsmasq, Composer and MariaDB.
+  - *About*: versions of PureValet, Valet, PHP, nginx, dnsmasq, Composer and MariaDB; update check.
 
 The menu bar logo is dimmed while Valet is stopped.
 
@@ -77,9 +77,19 @@ valet install
 
 ## Install
 
+### With Homebrew (recommended)
+
+```bash
+brew install --cask aubinvan/tap/purevalet
+```
+
+Update later with `brew upgrade --cask purevalet`.
+
+### Manually
+
 1. Download `PureValet-x.y.z.dmg` from the [latest release](https://github.com/aubinvan/purevalet/releases/latest).
 2. Open it and drag **PureValet** to **Applications**.
-3. First launch: the app is ad-hoc signed but **not notarized** (no paid Apple Developer account), so macOS blocks it once. Either open it and go to **System Settings → Privacy & Security → Open Anyway**, or remove the quarantine flag:
+3. First launch (both methods): the app is ad-hoc signed but **not notarized** (no paid Apple Developer account), so macOS blocks it once. Either open it and go to **System Settings → Privacy & Security → Open Anyway**, or remove the quarantine flag:
 
 ```bash
 xattr -dr com.apple.quarantine "/Applications/PureValet.app"
@@ -90,6 +100,13 @@ Check the download against the `.sha256` file attached to the release:
 ```bash
 shasum -a 256 -c PureValet-x.y.z.dmg.sha256
 ```
+
+## Updates
+
+PureValet checks GitHub for a new release **at most once a day** (one request, when it starts or when you open the menu). When one is available, a *Download PureValet x.y.z…* item appears in the menu, and the About tab shows the release notes and a download button. Nothing is downloaded or installed without you.
+
+- Turn it off in **Settings → About → Check for updates automatically**, or click **Check Now**.
+- Homebrew users: `brew upgrade --cask purevalet`.
 
 ## Starting and stopping
 

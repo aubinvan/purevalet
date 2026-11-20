@@ -3,6 +3,13 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-11-20
+
+### Added
+- Update check: one request to the GitHub Releases API, at most once a day (at launch or when the menu opens), plus *Check Now*. A *Download PureValet x.y.z…* menu item appears when a newer version exists. Can be turned off. No dependency, nothing installed automatically.
+- Homebrew cask: `brew install --cask aubinvan/tap/purevalet`, then `brew upgrade --cask purevalet`.
+- `scripts/update-cask.sh` publishes the cask for each release.
+
 ## [0.4.0] - 2026-11-20
 
 ### Added

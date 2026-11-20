@@ -56,6 +56,25 @@ final class ParsingTests: XCTestCase {
         XCTAssertEqual(ValetModel.versionFromCellarPath("../Cellar/nginx/1.29.3"), "1.29.3")
     }
 
+    func testVersionComparison() {
+        XCTAssertTrue(Updater.isVersion("0.10.0", newerThan: "0.9.2"))
+        XCTAssertTrue(Updater.isVersion("1.0", newerThan: "0.9.9"))
+        XCTAssertFalse(Updater.isVersion("0.5.0", newerThan: "0.5.0"))
+        XCTAssertFalse(Updater.isVersion("0.4.9", newerThan: "0.5"))
+    }
+
+    func testParsesGitHubRelease() throws {
+        let json = """
+        {"tag_name": "v0.6.0", "html_url": "https://github.com/aubinvan/purevalet/releases/tag/v0.6.0",
+         "assets": [{"browser_download_url": "https://example.com/PureValet-0.6.0.dmg.sha256"},
+                    {"browser_download_url": "https://example.com/PureValet-0.6.0.dmg"}]}
+        """
+        let update = try XCTUnwrap(Updater.parseRelease(Data(json.utf8)))
+        XCTAssertEqual(update.version, "0.6.0")
+        XCTAssertEqual(update.downloadURL?.lastPathComponent, "PureValet-0.6.0.dmg")
+        XCTAssertNil(Updater.parseRelease(Data("{}".utf8)))
+    }
+
     func testSlug() {
         XCTAssertEqual(ValetModel.slug("Mon Projet_2"), "mon-projet-2")
     }

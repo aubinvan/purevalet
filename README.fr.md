@@ -34,7 +34,7 @@ Inspirée de [Hex](https://hex.audio) : un menu natif simple pour les actions co
   - *Général* : état, version du CLI Valet, domaine, dossiers des logs et de la configuration, PHP global, commandes sans mot de passe, MariaDB, comportement de l’appli (démarrage au lancement, arrêt en quittant, ouverture à la connexion).
   - *Sites* : sites liés et parqués, HTTPS, PHP par site, copier l’URL, Finder, Terminal, délier ; dossiers parqués (parquer / oublier).
   - *Proxys* : liste, ajout, suppression.
-  - *À propos* : versions de PureValet, Valet, PHP, nginx, dnsmasq, Composer et MariaDB.
+  - *À propos* : versions de PureValet, Valet, PHP, nginx, dnsmasq, Composer et MariaDB ; mises à jour.
 
 Le logo de la barre de menus est atténué quand Valet est arrêté.
 
@@ -71,9 +71,19 @@ valet install
 
 ## Installation
 
+### Avec Homebrew (recommandé)
+
+```bash
+brew install --cask aubinvan/tap/purevalet
+```
+
+Mise à jour ensuite avec `brew upgrade --cask purevalet`.
+
+### Manuellement
+
 1. Téléchargez `PureValet-x.y.z.dmg` depuis la [dernière version](https://github.com/aubinvan/purevalet/releases/latest).
 2. Ouvrez-le et glissez **PureValet** dans **Applications**.
-3. Premier lancement : l’appli est signée ad hoc mais **pas notarisée** (pas de compte Apple Developer payant), macOS la bloque donc une fois. Lancez-la puis **Réglages Système → Confidentialité et sécurité → Ouvrir quand même**, ou retirez l’attribut de quarantaine :
+3. Premier lancement (dans les deux cas) : l’appli est signée ad hoc mais **pas notarisée** (pas de compte Apple Developer payant), macOS la bloque donc une fois. Lancez-la puis **Réglages Système → Confidentialité et sécurité → Ouvrir quand même**, ou retirez l’attribut de quarantaine :
 
 ```bash
 xattr -dr com.apple.quarantine "/Applications/PureValet.app"
@@ -84,6 +94,13 @@ Vérifier le téléchargement avec le fichier `.sha256` joint à la version :
 ```bash
 shasum -a 256 -c PureValet-x.y.z.dmg.sha256
 ```
+
+## Mises à jour
+
+PureValet vérifie sur GitHub s’il existe une nouvelle version **au plus une fois par jour** (une seule requête, au lancement ou à l’ouverture du menu). Si c’est le cas, l’élément *Télécharger PureValet x.y.z…* apparaît dans le menu, et l’onglet À propos affiche les notes de version et un bouton de téléchargement. Rien n’est téléchargé ni installé sans vous.
+
+- Désactivable dans **Réglages → À propos → Rechercher les mises à jour automatiquement**, ou bouton **Vérifier maintenant**.
+- Avec Homebrew : `brew upgrade --cask purevalet`.
 
 ## Démarrage et arrêt
 

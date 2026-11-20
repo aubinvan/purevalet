@@ -556,12 +556,9 @@ struct AboutPane: View {
                     Spacer()
                     Link("View on GitHub", destination: URL(string: "https://github.com/aubinvan/purevalet")!)
                 }
-                HStack {
-                    Label("New versions", systemImage: "arrow.down.circle")
-                    Spacer()
-                    Link("Releases", destination: URL(string: "https://github.com/aubinvan/purevalet/releases")!)
-                }
             }
+
+            UpdatesSection()
 
             Section {
                 ForEach(model.versions) { component in
@@ -600,6 +597,53 @@ struct AboutPane: View {
             }
         }
         .formStyle(.grouped)
+    }
+}
+
+struct UpdatesSection: View {
+    @AppStorage(Updater.autoCheckKey) private var autoCheck = true
+    private var updater: Updater { Updater.shared }
+
+    var body: some View {
+        Section {
+            Toggle(isOn: $autoCheck) {
+                Label("Check for updates automatically", systemImage: "arrow.triangle.2.circlepath")
+            }
+            HStack {
+                Label {
+                    Text(updater.statusMessage ?? String(localized: "Version \(currentVersion)"))
+                } icon: {
+                    Image(systemName: updater.available == nil ? "checkmark.seal" : "arrow.down.circle.fill")
+                        .foregroundStyle(updater.available == nil ? Color.secondary : Color.accentColor)
+                }
+                Spacer()
+                if updater.isChecking {
+                    ProgressView().controlSize(.small)
+                } else if let update = updater.available {
+                    Button("Release Notes") { updater.openReleaseNotes(update) }
+                    Button("Download") { updater.download(update) }
+                        .buttonStyle(.borderedProminent)
+                } else {
+                    Button("Check Now") { Task { await updater.check(manual: true) } }
+                }
+            }
+            HStack {
+                Text("Homebrew users can update with `brew upgrade purevalet`.")
+                    .settingsCaption()
+                Spacer()
+                Link("All releases", destination: URL(string: "https://github.com/aubinvan/purevalet/releases")!)
+                    .font(.caption)
+            }
+        } header: {
+            Text("Updates")
+        } footer: {
+            Text("At most once a day, one request to GitHub. Nothing is downloaded or installed without you.")
+                .settingsCaption()
+        }
+    }
+
+    private var currentVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
     }
 }
 

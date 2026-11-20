@@ -34,7 +34,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var quitting = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        guard !Snapshot.isActive, Preferences.startOnLaunch else { return }
+        guard !Snapshot.isActive else { return }
+        Task { await Updater.shared.checkIfDue() }
+        guard Preferences.startOnLaunch else { return }
         Task {
             await ValetModel.shared.refresh()
             await ValetModel.shared.startAll()
@@ -103,8 +105,10 @@ enum Snapshot {
             try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             let model = ValetModel()
             await model.refresh()
+            await Updater.shared.check(manual: true)
             let selection = TabSelection()
             let window = SettingsWindowController.makeWindow(model: model, selection: selection)
+            window.setContentSize(NSSize(width: 720, height: 1100))
             window.alphaValue = 0
             window.orderFrontRegardless()
 

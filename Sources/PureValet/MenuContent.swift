@@ -85,6 +85,10 @@ struct MenuContent: View {
 
         Divider()
 
+        if let update = Updater.shared.available {
+            Button("Download PureValet \(update.version)…") { Updater.shared.download(update) }
+        }
+
         Button("Settings…") { SettingsWindowController.shared.show(model: model) }
             .keyboardShortcut(",")
 
