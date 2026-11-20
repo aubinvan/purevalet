@@ -8,10 +8,10 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .general: return "Général"
-        case .sites: return "Sites"
-        case .proxies: return "Proxys"
-        case .about: return "À propos"
+        case .general: return String(localized: "General")
+        case .sites: return String(localized: "Sites")
+        case .proxies: return String(localized: "Proxies")
+        case .about: return String(localized: "About")
         }
     }
 
@@ -25,7 +25,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     }
 }
 
-/// Fenêtre de réglages créée à la demande et libérée à la fermeture (rien ne reste en mémoire).
+/// Settings window, created on demand and released when closed (nothing stays in memory).
 @MainActor
 final class SettingsWindowController: NSObject, NSWindowDelegate {
     static let shared = SettingsWindowController()
@@ -51,7 +51,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     static func makeWindow(model: ValetModel, selection: TabSelection) -> NSWindow {
         let root = SettingsView(selection: selection).environment(model)
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 720, height: 560),
+            contentRect: NSRect(x: 0, y: 0, width: 720, height: 600),
             styleMask: [.titled, .fullSizeContentView, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
@@ -76,7 +76,7 @@ final class TabSelection {
     var tab: SettingsTab = .general
 }
 
-// MARK: - Vue principale (barre latérale + détail)
+// MARK: - Main view (sidebar + detail)
 
 struct SettingsView: View {
     @Environment(ValetModel.self) private var model
@@ -103,9 +103,9 @@ struct SettingsView: View {
                             Button {
                                 Task { await model.refresh() }
                             } label: {
-                                Label("Actualiser", systemImage: "arrow.clockwise")
+                                Label("Refresh", systemImage: "arrow.clockwise")
                             }
-                            .help("Actualiser l'état de Valet")
+                            .help("Refresh Valet status")
                         }
                     }
                 }
@@ -125,36 +125,46 @@ struct SettingsView: View {
     }
 }
 
-// MARK: - Général
+// MARK: - General
 
 struct GeneralPane: View {
     @Environment(ValetModel.self) private var model
+    @AppStorage(Preferences.startOnLaunchKey) private var startOnLaunch = false
+    @AppStorage(Preferences.stopOnQuitKey) private var stopOnQuit = true
 
     var body: some View {
         Form {
             Section {
                 HStack {
-                    Label {
-                        Text("État")
-                    } icon: {
-                        Image(systemName: "power")
-                    }
+                    Label("Status", systemImage: "power")
                     Spacer()
                     StatusBadge()
                     if model.isInstalled {
                         if model.running == true {
-                            Button("Arrêter") { Task { await model.stop() } }
+                            Button("Restart") { Task { await model.restart() } }
+                            Button("Stop") { Task { await model.stop() } }
                         } else {
-                            Button("Démarrer") { Task { await model.start() } }
+                            Button("Start") { Task { await model.start() } }
                                 .buttonStyle(.borderedProminent)
                         }
                     }
                 }
                 if model.isInstalled {
                     LabeledContent {
-                        Text(".\(model.tld)").foregroundStyle(.secondary)
+                        Text(model.valetVersion ?? "—").foregroundStyle(.secondary)
                     } label: {
-                        Label("Domaine", systemImage: "globe")
+                        Label("Valet CLI version", systemImage: "terminal")
+                    }
+                    LabeledContent {
+                        Text(verbatim: ".\(model.tld)").foregroundStyle(.secondary)
+                    } label: {
+                        Label("Domain", systemImage: "globe")
+                    }
+                    HStack {
+                        Label("Files", systemImage: "folder")
+                        Spacer()
+                        Button("Logs") { model.openLogs() }
+                        Button("Configuration") { model.openConfig() }
                     }
                 }
             } header: {
@@ -175,12 +185,28 @@ struct GeneralPane: View {
                             Text(php.label).tag(php.formula)
                         }
                     } label: {
-                        Label("Version globale", systemImage: "chevron.left.forwardslash.chevron.right")
+                        Label("Global version", systemImage: "chevron.left.forwardslash.chevron.right")
                     }
-                    Text("Équivaut à `valet use`. Un site isolé garde sa propre version (onglet Sites).")
+                    Text("Same as `valet use`. An isolated site keeps its own version (Sites tab).")
                         .settingsCaption()
                 } header: {
                     Text("PHP")
+                }
+
+                Section {
+                    HStack {
+                        Label("Password-free commands", systemImage: "key")
+                        Spacer()
+                        if model.trusted {
+                            Text("Enabled").foregroundStyle(.secondary)
+                        } else {
+                            Button("Enable…") { Task { await model.trust() } }
+                        }
+                    }
+                    Text("Runs `valet trust` once: adds sudoers rules for `valet` and `brew` so Start, Stop and Secure no longer ask for your password.")
+                        .settingsCaption()
+                } header: {
+                    Text("Administrator password")
                 }
             }
 
@@ -189,24 +215,50 @@ struct GeneralPane: View {
                     HStack {
                         Label("MariaDB (Homebrew)", systemImage: "cylinder.split.1x2")
                         Spacer()
-                        Text(model.mariadbRunning == true ? "Démarré" : (model.mariadbRunning == false ? "Arrêté" : "…"))
-                            .foregroundStyle(.secondary)
+                        Text(mariadbState).foregroundStyle(.secondary)
                         if model.mariadbRunning == true {
-                            Button("Arrêter") { Task { await model.setMariaDB(false) } }
+                            Button("Stop") { Task { await model.setMariaDB(false) } }
                         } else {
-                            Button("Démarrer") { Task { await model.setMariaDB(true) } }
+                            Button("Start") { Task { await model.setMariaDB(true) } }
                         }
                     }
                     if model.yerdDetected {
-                        Text("Yerd a sa propre base de données : une seule peut écouter le port 3306 à la fois.")
+                        Text("Yerd has its own database: only one can listen on port 3306 at a time.")
                             .settingsCaption()
                     }
                 } header: {
-                    Text("Base de données")
+                    Text("Database")
                 }
+            }
+
+            Section {
+                Toggle(isOn: $startOnLaunch) {
+                    Label("Start services when PureValet opens", systemImage: "play.circle")
+                }
+                Toggle(isOn: $stopOnQuit) {
+                    Label("Stop all services when quitting", systemImage: "stop.circle")
+                }
+                Text("Services are Valet (nginx, PHP-FPM, dnsmasq) and Homebrew MariaDB. When PureValet quits, they are stopped and unregistered, so nothing keeps running or restarts at boot. Enable password-free commands to quit without a password prompt.")
+                    .settingsCaption()
+                Toggle(isOn: Binding(
+                    get: { model.launchAtLogin },
+                    set: { model.setLaunchAtLogin($0) }
+                )) {
+                    Label("Open at login", systemImage: "arrow.right.circle")
+                }
+            } header: {
+                Text("App")
             }
         }
         .formStyle(.grouped)
+    }
+
+    private var mariadbState: String {
+        switch model.mariadbRunning {
+        case .some(true): return String(localized: "Running")
+        case .some(false): return String(localized: "Stopped")
+        case .none: return "…"
+        }
     }
 }
 
@@ -236,8 +288,8 @@ struct NotInstalledSection: View {
         Section {
             Label {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Valet n'est pas installé sur ce Mac").bold()
-                    Text("Aucun binaire `valet` trouvé (Composer global ou Homebrew). PureValet n'installe rien lui-même : lance ces commandes dans un Terminal, puis clique sur Actualiser.")
+                    Text("Valet is not installed on this Mac").bold()
+                    Text("No `valet` binary found (global Composer or Homebrew). PureValet never installs anything itself: run these commands in Terminal, then click Refresh.")
                         .settingsCaption()
                 }
             } icon: {
@@ -245,7 +297,7 @@ struct NotInstalledSection: View {
             }
 
             HStack {
-                Text("composer global require laravel/valet\nvalet install")
+                Text(verbatim: "composer global require laravel/valet\nvalet install")
                     .font(.system(.callout, design: .monospaced))
                     .textSelection(.enabled)
                 Spacer()
@@ -253,13 +305,13 @@ struct NotInstalledSection: View {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString("composer global require laravel/valet && valet install", forType: .string)
                 } label: {
-                    Label("Copier", systemImage: "doc.on.doc")
+                    Label("Copy", systemImage: "doc.on.doc")
                 }
             }
 
             if model.yerdDetected {
                 Label {
-                    Text("Yerd est présent : il utilise aussi les ports 80/443 et le DNS .test. Arrête-le avant d'installer ou de démarrer Valet.")
+                    Text("Yerd is installed: it also uses ports 80/443 and the .test DNS. Stop it before installing or starting Valet.")
                         .settingsCaption()
                 } icon: {
                     Image(systemName: "info.circle")
@@ -283,19 +335,62 @@ struct SitesPane: View {
             Form {
                 Section {
                     if model.sites.isEmpty {
-                        Text("Aucun site lié. Utilise « Lier un dossier… » pour en ajouter un.").settingsCaption()
+                        Text("No sites yet. Link a folder, or park a folder that contains your projects.").settingsCaption()
                     }
                     ForEach(model.sites) { site in
                         SiteRow(site: site)
                     }
                 } header: {
                     HStack {
-                        Text("Sites liés")
+                        Text("Sites")
                         Spacer()
                         Button {
                             Task { await model.chooseAndLinkFolder() }
                         } label: {
-                            Label("Lier un dossier…", systemImage: "plus")
+                            Label("Link a Folder…", systemImage: "plus")
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                }
+
+                Section {
+                    if model.parkedPaths.isEmpty {
+                        Text("No parked folders. Every subfolder of a parked folder is served as `folder-name.\(model.tld)`.")
+                            .settingsCaption()
+                    }
+                    ForEach(model.parkedPaths, id: \.self) { path in
+                        HStack(spacing: 10) {
+                            Image(systemName: "folder")
+                                .foregroundStyle(.secondary)
+                                .frame(width: 16)
+                            Text(verbatim: path)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                            Spacer()
+                            Button {
+                                model.reveal(path)
+                            } label: {
+                                Image(systemName: "magnifyingglass")
+                            }
+                            .buttonStyle(.borderless)
+                            .help("Show in Finder")
+                            Button(role: .destructive) {
+                                Task { await model.forget(path) }
+                            } label: {
+                                Image(systemName: "trash")
+                            }
+                            .buttonStyle(.borderless)
+                            .help("Stop serving this folder (valet forget)")
+                        }
+                    }
+                } header: {
+                    HStack {
+                        Text("Parked folders")
+                        Spacer()
+                        Button {
+                            Task { await model.chooseAndParkFolder() }
+                        } label: {
+                            Label("Park a Folder…", systemImage: "plus")
                         }
                         .buttonStyle(.borderless)
                     }
@@ -318,29 +413,37 @@ struct SiteRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Button(model.displayURL(site)) { model.open(site) }
                     .buttonStyle(.link)
-                Text(site.path)
+                Text(verbatim: site.path)
                     .settingsCaption()
                     .lineLimit(1)
                     .truncationMode(.middle)
             }
             Spacer()
+            if site.parked {
+                Text("parked").font(.caption).foregroundStyle(.tertiary)
+            }
             if !site.php.isEmpty {
-                Text(site.php).font(.caption).foregroundStyle(.secondary)
+                Text(verbatim: site.php).font(.caption).foregroundStyle(.secondary)
             }
             Menu {
-                Button(site.secured ? "Passer en HTTP (unsecure)" : "Passer en HTTPS (secure)") {
+                Button(site.secured ? LocalizedStringKey("Switch to HTTP (unsecure)") : LocalizedStringKey("Switch to HTTPS (secure)")) {
                     Task { await model.setSecure(site, !site.secured) }
                 }
-                Menu("Version PHP du site") {
+                Menu("Site PHP Version") {
                     ForEach(model.phpFormulas) { php in
                         Button(php.label) { Task { await model.isolate(site, formula: php.formula) } }
                     }
                     Divider()
-                    Button("Revenir au PHP global (unisolate)") { Task { await model.unisolate(site) } }
+                    Button("Use Global PHP (unisolate)") { Task { await model.unisolate(site) } }
                 }
-                Button("Afficher dans le Finder") { model.reveal(site) }
                 Divider()
-                Button("Unlink", role: .destructive) { Task { await model.unlink(site) } }
+                Button("Copy URL") { model.copyURL(site) }
+                Button("Show in Finder") { model.reveal(site.path) }
+                Button("Open in Terminal") { model.openInTerminal(site.path) }
+                if !site.parked {
+                    Divider()
+                    Button("Unlink", role: .destructive) { Task { await model.unlink(site) } }
+                }
             } label: {
                 Image(systemName: "ellipsis.circle")
             }
@@ -351,7 +454,7 @@ struct SiteRow: View {
     }
 }
 
-// MARK: - Proxys
+// MARK: - Proxies
 
 struct ProxiesPane: View {
     @Environment(ValetModel.self) private var model
@@ -366,7 +469,7 @@ struct ProxiesPane: View {
             Form {
                 Section {
                     if model.proxies.isEmpty {
-                        Text("Aucun proxy.").settingsCaption()
+                        Text("No proxies.").settingsCaption()
                     }
                     ForEach(model.proxies) { proxy in
                         HStack(spacing: 10) {
@@ -375,7 +478,7 @@ struct ProxiesPane: View {
                                 .frame(width: 16)
                             Button(model.displayURL(proxy)) { model.open(proxy) }
                                 .buttonStyle(.link)
-                            Text("→ \(proxy.host)").settingsCaption().lineLimit(1)
+                            Text(verbatim: "→ \(proxy.host)").settingsCaption().lineLimit(1)
                             Spacer()
                             Button(role: .destructive) {
                                 Task { await model.unproxy(proxy) }
@@ -383,27 +486,27 @@ struct ProxiesPane: View {
                                 Image(systemName: "trash")
                             }
                             .buttonStyle(.borderless)
-                            .help("valet unproxy \(proxy.name)")
+                            .help("Remove this proxy (valet unproxy)")
                         }
                     }
                 } header: {
-                    Text("Proxys actifs")
+                    Text("Active proxies")
                 }
 
                 Section {
-                    TextField(text: $name, prompt: Text("mon-app")) {
-                        Label("Nom", systemImage: "character.cursor.ibeam")
+                    TextField(text: $name, prompt: Text(verbatim: "my-app")) {
+                        Label("Name", systemImage: "character.cursor.ibeam")
                     }
-                    TextField(text: $port, prompt: Text("5173")) {
-                        Label("Port local", systemImage: "number")
+                    TextField(text: $port, prompt: Text(verbatim: "5173")) {
+                        Label("Local port", systemImage: "number")
                     }
                     Toggle(isOn: $secure) {
                         Label("HTTPS", systemImage: "lock")
                     }
                     HStack {
-                        Text(preview).settingsCaption()
+                        Text(verbatim: preview).settingsCaption()
                         Spacer()
-                        Button("Ajouter") {
+                        Button("Add") {
                             let portNumber = Int(port) ?? 0
                             Task {
                                 await model.addProxy(name: name, port: portNumber, secure: secure)
@@ -417,7 +520,7 @@ struct ProxiesPane: View {
                         .disabled(name.isEmpty || Int(port) == nil)
                     }
                 } header: {
-                    Text("Ajouter un proxy (Node, Vite…)")
+                    Text("Add a proxy (Node, Vite…)")
                 }
             }
             .formStyle(.grouped)
@@ -425,19 +528,15 @@ struct ProxiesPane: View {
     }
 
     private var preview: String {
-        let slug = ValetModel.slug(name.isEmpty ? "mon-app" : name)
+        let slug = ValetModel.slug(name.isEmpty ? "my-app" : name)
         return "\(secure ? "https" : "http")://\(slug).\(model.tld)  →  http://127.0.0.1:\(port.isEmpty ? "5173" : port)"
     }
 }
 
-// MARK: - À propos
+// MARK: - About
 
 struct AboutPane: View {
     @Environment(ValetModel.self) private var model
-
-    private var version: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
-    }
 
     var body: some View {
         Form {
@@ -447,50 +546,56 @@ struct AboutPane: View {
                         .resizable()
                         .frame(width: 64, height: 64)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("PureValet").font(.title2.bold())
-                        Text("Laravel Valet dans la barre de menus").settingsCaption()
+                        Text(verbatim: "PureValet").font(.title2.bold())
+                        Text("Laravel Valet in your menu bar").settingsCaption()
                     }
                 }
                 .padding(.vertical, 4)
-            }
-
-            Section {
-                LabeledContent {
-                    Text(version).foregroundStyle(.secondary)
-                } label: {
-                    Label("Version", systemImage: "info.circle")
-                }
                 HStack {
-                    Label("PureValet est open source (MIT)", systemImage: "chevron.left.forwardslash.chevron.right")
+                    Label("Open source (MIT)", systemImage: "chevron.left.forwardslash.chevron.right")
                     Spacer()
-                    Link("Voir sur GitHub", destination: URL(string: "https://github.com/aubinvan/purevalet")!)
+                    Link("View on GitHub", destination: URL(string: "https://github.com/aubinvan/purevalet")!)
                 }
                 HStack {
-                    Label("Nouvelles versions", systemImage: "arrow.down.circle")
+                    Label("New versions", systemImage: "arrow.down.circle")
                     Spacer()
                     Link("Releases", destination: URL(string: "https://github.com/aubinvan/purevalet/releases")!)
                 }
             }
 
             Section {
+                ForEach(model.versions) { component in
+                    LabeledContent {
+                        Text(component.version ?? String(localized: "not installed"))
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    } label: {
+                        Text(verbatim: component.name)
+                    }
+                }
+            } header: {
+                Text("Versions")
+            }
+
+            Section {
                 LabeledContent {
-                    Text(model.valetBinary ?? "non installé")
+                    Text(verbatim: model.valetBinary ?? "—")
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .truncationMode(.middle)
                         .textSelection(.enabled)
                 } label: {
-                    Label("Binaire Valet", systemImage: "terminal")
+                    Label("Valet binary", systemImage: "terminal")
                 }
                 LabeledContent {
-                    Text(Shell.brewPrefix).foregroundStyle(.secondary)
+                    Text(verbatim: Shell.brewPrefix).foregroundStyle(.secondary)
                 } label: {
                     Label("Homebrew", systemImage: "shippingbox")
                 }
             } header: {
-                Text("Environnement")
+                Text("Environment")
             } footer: {
-                Text("Projet communautaire, non affilié à Laravel. Aucune tâche en arrière-plan : l'état est relu à l'ouverture du menu.")
+                Text("Community project, not affiliated with Laravel. No background task: state is read when you open the menu.")
                     .settingsCaption()
             }
         }
@@ -498,14 +603,14 @@ struct AboutPane: View {
     }
 }
 
-// MARK: - Éléments partagés
+// MARK: - Shared
 
 struct NotInstalledPlaceholder: View {
     var body: some View {
         ContentUnavailableView {
-            Label("Valet non installé", systemImage: "exclamationmark.triangle")
+            Label("Valet not installed", systemImage: "exclamationmark.triangle")
         } description: {
-            Text("Installe Laravel Valet (voir l'onglet Général), puis actualise.")
+            Text("Install Laravel Valet (see the General tab), then refresh.")
         }
     }
 }
@@ -522,10 +627,10 @@ struct FeedbackBar: View {
                 Text(message).font(.callout).lineLimit(2)
                 Spacer()
                 if !model.lastOutput.isEmpty {
-                    Button("Détails") { showDetails.toggle() }
+                    Button("Details") { showDetails.toggle() }
                         .popover(isPresented: $showDetails, arrowEdge: .top) {
                             ScrollView {
-                                Text(model.lastOutput)
+                                Text(verbatim: model.lastOutput)
                                     .font(.system(.caption, design: .monospaced))
                                     .textSelection(.enabled)
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -543,7 +648,7 @@ struct FeedbackBar: View {
 }
 
 extension Text {
-    /// Texte d'aide en petit et grisé, comme dans les réglages de macOS.
+    /// Small secondary helper text, like in macOS System Settings.
     func settingsCaption() -> some View {
         font(.caption).foregroundStyle(.secondary)
     }

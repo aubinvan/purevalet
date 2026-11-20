@@ -5,7 +5,7 @@
 <h1 align="center">PureValet</h1>
 
 <p align="center">
-  A tiny native macOS menu bar app to drive <a href="https://laravel.com/docs/valet">Laravel Valet</a> without the terminal.<br>
+  A tiny native macOS menu bar app that runs your whole <a href="https://laravel.com/docs/valet">Laravel Valet</a> environment, no terminal needed.<br>
   <a href="README.fr.md">Version française</a>
 </p>
 
@@ -21,41 +21,51 @@
   <img src="docs/screenshot-general.png" width="640" alt="PureValet settings window">
 </p>
 
-Valet is the lightest local PHP environment on macOS (nginx + dnsmasq + php-fpm, no Docker, no VM), but it only has a CLI. PureValet puts the everyday commands one click away in the menu bar, and stays out of the way:
+Valet is the lightest local PHP environment on macOS (nginx + PHP-FPM + dnsmasq, no Docker, no VM), but it is CLI-only and its services keep running until you stop them. PureValet turns it into an app you open when you work and quit when you are done:
 
-- **Native SwiftUI**, ~560 KB DMG, universal (Apple Silicon + Intel), no dependencies.
-- **Nothing runs in the background.** No timers, no daemon, no helper. State is read when you open the menu or the settings window, and after each action. Quit the app and nothing is left.
-- **Installs nothing.** If Valet is missing, the app says so and shows the command to run yourself.
+- **Open PureValet → your stack runs.** Start Valet (nginx, PHP-FPM, dnsmasq) and Homebrew MariaDB from the menu, or automatically at launch.
+- **Quit PureValet → everything stops.** Valet and MariaDB are stopped and unregistered from launchd: nothing keeps running in the background and nothing restarts at boot.
+- **Native and light.** SwiftUI, DMG under 1 MB, universal (Apple Silicon + Intel), no dependencies, no timers, no daemon.
+- **Installs nothing.** If Valet is missing, PureValet says so and shows the command to run yourself.
+- **English and French.** The app follows your macOS language.
 
 > PureValet is a community project and is not affiliated with or endorsed by Laravel.
 
 ## Interface
 
-Inspired by [Hex](https://hex.audio): a plain native menu in the menu bar for everyday actions, and a settings window for the rest.
+Inspired by [Hex](https://hex.audio): a plain native menu for everyday actions, and a settings window for the rest.
 
-- **Menu bar menu**: status, Start / Stop Valet, *Sites* (open in browser, link a folder), *Proxies*, *Global PHP* (checkmark on the active version), MariaDB, **Settings… ⌘,**, **Quit ⌘Q**.
-- **Settings window** with a sidebar: *General* (status, global PHP, MariaDB, install help), *Sites* (HTTPS, per-site PHP, Finder, unlink), *Proxies* (list, add, remove), *About*. The window is created when you open it and released when you close it.
+- **Menu bar menu**: status, *Start All Services* / *Stop All Services*, Start / Restart / Stop Valet, *Sites* (open, link or park a folder), *Proxies*, *Global PHP* (checkmark on the active version), *Logs & Files*, MariaDB, **Settings… ⌘,**, **Quit ⌘Q**.
+- **Settings window** with a sidebar:
+  - *General*: status, Valet CLI version, domain, logs and configuration folders, global PHP, password-free commands, MariaDB, app behaviour (start at launch, stop at quit, open at login).
+  - *Sites*: linked and parked sites, HTTPS, per-site PHP, copy URL, Finder, Terminal, unlink; parked folders (park / forget).
+  - *Proxies*: list, add, remove.
+  - *About*: versions of PureValet, Valet, PHP, nginx, dnsmasq, Composer and MariaDB.
+
+The menu bar logo is dimmed while Valet is stopped.
 
 ## Features
 
-| Area | What you can do | Valet / Homebrew command |
+| Area | What you can do | Command used |
 | --- | --- | --- |
-| Status | See running / stopped / **not installed**, Start / Stop | `valet status`, `valet start`, `valet stop` |
-| Sites | List linked sites, open them in the browser, reveal in Finder | `valet links` |
-| Link | Pick a folder and link it | `valet link <name>` |
+| Services | Start / stop everything at once, at launch or at quit | `valet start\|stop`, `brew services run\|stop mariadb` |
+| Valet | Start, restart, stop, see the CLI version | `valet start\|restart\|stop`, `valet --version` |
+| Sites | Linked and parked sites: open, copy URL, Finder, Terminal | `valet links`, `valet parked` |
+| Link / Park | Link one folder, or park a folder of projects; forget it | `valet link`, `valet park`, `valet forget` |
 | HTTPS | Secure / unsecure a site | `valet secure`, `valet unsecure` |
-| PHP | Switch the global PHP version | `valet use php@X` |
-| PHP per site | Isolate a site on a PHP version, or go back to global | `valet isolate`, `valet unisolate` |
-| Proxies | Proxy `name.test` to a local port (Node, Vite…), remove it | `valet proxy <name> http://127.0.0.1:<port> [--secure]`, `valet unproxy` |
-| MariaDB | Start / stop Homebrew MariaDB (if installed) | `brew services start\|stop mariadb` |
+| PHP | Global version, or a version per site | `valet use`, `valet isolate`, `valet unisolate` |
+| Proxies | Proxy `name.test` to a local port (Node, Vite…) | `valet proxy`, `valet unproxy` |
+| Password | Stop the password prompts | `valet trust` |
+| Files | Open Valet logs and configuration | `~/.config/valet` |
+| MariaDB | Start / stop Homebrew MariaDB (not registered at login) | `brew services run\|stop mariadb` |
 
-It also warns you if Yerd is present, since it competes for ports 80/443 and the `.test` DNS.
+PureValet also warns you if Yerd is installed, since it competes for ports 80/443, the `.test` DNS and port 3306.
 
 ## Requirements
 
 - macOS 14 Sonoma or later
 - [Homebrew](https://brew.sh) (`/opt/homebrew` or `/usr/local`)
-- Laravel Valet installed with Composer, to actually drive something:
+- Laravel Valet, installed with Composer:
 
 ```bash
 composer global require laravel/valet
@@ -69,27 +79,35 @@ valet install
 
 1. Download `PureValet-x.y.z.dmg` from the [latest release](https://github.com/aubinvan/purevalet/releases/latest).
 2. Open it and drag **PureValet** to **Applications**.
-3. First launch: the app is ad-hoc signed but **not notarized** (no paid Apple Developer account), so macOS blocks it once. Either:
-   - open it, then go to **System Settings → Privacy & Security** and click **Open Anyway**; or
-   - remove the quarantine flag:
+3. First launch: the app is ad-hoc signed but **not notarized** (no paid Apple Developer account), so macOS blocks it once. Either open it and go to **System Settings → Privacy & Security → Open Anyway**, or remove the quarantine flag:
 
 ```bash
 xattr -dr com.apple.quarantine "/Applications/PureValet.app"
 ```
 
-The **V** logo appears in the menu bar (no Dock icon); it is dimmed while Valet is stopped. Click it for the menu, **Settings…** (⌘,) for the full window, **Quit** (⌘Q) to close everything.
-
-You can check the download against the `.sha256` file attached to the release:
+Check the download against the `.sha256` file attached to the release:
 
 ```bash
 shasum -a 256 -c PureValet-x.y.z.dmg.sha256
 ```
 
+## Starting and stopping
+
+In **Settings → General → App**:
+
+| Option | Default | Effect |
+| --- | --- | --- |
+| Start services when PureValet opens | Off | Starts Valet and MariaDB at launch |
+| Stop all services when quitting | **On** | Stops Valet and MariaDB when you quit PureValet (or log out / shut down) |
+| Open at login | Off | Opens PureValet when you log in |
+
+Why it matters: `valet start` registers nginx, PHP-FPM and dnsmasq with launchd, so without PureValet they would keep running and restart at every boot. Quitting PureValet stops and unregisters them. MariaDB is started with `brew services run`, which never registers it at login.
+
 ## Administrator password (`sudo`)
 
-Valet re-runs some commands with `sudo` (start, stop, use, secure, isolate…). Since the app has no terminal, it gives `sudo` an *askpass* helper: a standard macOS dialog asks for your password. The password goes straight from the dialog to `sudo`; the app never reads or stores it. If you cancel, a clear message is shown, with a **Details** button for the full command output.
+Valet re-runs some commands with `sudo` (start, stop, use, secure, isolate…). The app has no terminal, so it gives `sudo` an *askpass* helper: a standard macOS dialog asks for your password, which goes straight to `sudo` (PureValet never reads or stores it).
 
-To avoid the prompt entirely, Valet offers `valet trust` (adds sudoers rules for `valet` and `brew`). Run it yourself if you want it.
+To avoid the prompt (recommended if you use *Stop all services when quitting*), click **Settings → General → Password-free commands → Enable…**, which runs `valet trust` once.
 
 ## Build from source
 
@@ -104,7 +122,7 @@ git clone https://github.com/aubinvan/purevalet.git && cd purevalet
 ```
 
 ```bash
-open "build/PureValet.app"
+open build/PureValet.app
 ```
 
 Build the DMG (output in `build/`, with its SHA-256):
@@ -113,26 +131,30 @@ Build the DMG (output in `build/`, with its SHA-256):
 ./scripts/make-dmg.sh
 ```
 
-Run the tests:
+Run the tests and the translation check:
 
 ```bash
 swift test
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the code layout and release process.
+```bash
+python3 scripts/check-l10n.py
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the code layout, translations and the release process.
 
 ## How it works
 
-- Commands are launched directly (no shell) with an explicit `PATH` (`/opt/homebrew/bin`, `~/.composer/vendor/bin`, `~/.config/composer/vendor/bin`…), because apps started from Finder do not inherit your shell `PATH`.
-- Valet's tables (`valet links`, `valet proxies`) are parsed by column name.
-- Installed PHP versions are read from Homebrew's `opt/php*` symlinks, without calling `brew`.
-- The UI is currently in **French**. Translations are welcome.
+- Commands are launched directly (no shell) with an explicit `PATH`, because apps started from Finder do not inherit your shell `PATH`. Homebrew analytics and auto-update are disabled for those commands.
+- Valet's tables (`valet links`, `valet parked`, `valet proxies`) are parsed by column name; `valet paths` is read as JSON.
+- Installed PHP versions and component versions are read from Homebrew's `opt/` symlinks, without calling `brew`.
+- State is read when the menu or the settings window opens, and after each action. No timer.
 
 ## Limitations
 
 - Not notarized (see Install).
-- Tested on Apple Silicon only; the Intel build (`/usr/local` Homebrew) is untested.
-- Parked directories (`valet park`) are not managed yet.
+- Tested on Apple Silicon; the Intel build is untested.
+- `valet share` and Expose are not supported.
 
 ## License
 

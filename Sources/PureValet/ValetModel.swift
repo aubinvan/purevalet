@@ -1,6 +1,7 @@
 import AppKit
 import Foundation
 import Observation
+import ServiceManagement
 
 struct ValetSite: Identifiable, Hashable {
     var id: String { name }
@@ -9,6 +10,8 @@ struct ValetSite: Identifiable, Hashable {
     let url: String
     let path: String
     let php: String
+    /// Site served from a parked folder (`valet park`): it cannot be unlinked on its own.
+    var parked = false
 }
 
 struct ValetProxy: Identifiable, Hashable {
@@ -19,7 +22,7 @@ struct ValetProxy: Identifiable, Hashable {
     let host: String
 }
 
-/// Une formule PHP Homebrew installée (ex. `php@8.4`).
+/// An installed Homebrew PHP formula (e.g. `php@8.4`).
 struct PHPFormula: Identifiable, Hashable {
     var id: String { formula }
     let formula: String
@@ -28,27 +31,55 @@ struct PHPFormula: Identifiable, Hashable {
     var label: String { "PHP \(version)  (\(formula))" }
 }
 
+/// A component shown in the "Versions" list.
+struct ComponentVersion: Identifiable, Hashable {
+    var id: String { name }
+    let name: String
+    let version: String?
+}
+
 enum InstallState: Equatable {
     case unknown
     case notInstalled
     case installed(binary: String)
 }
 
-/// État de Valet et actions. Aucun minuteur : on rafraîchit à l'ouverture du menu
-/// et après chaque action, rien ne tourne quand le menu est fermé ou l'appli quittée.
+/// Valet state and actions. No timer: state is refreshed when the menu or the settings
+/// window opens and after each action. Nothing runs while the app is idle or after it quits.
+/// User preferences (UserDefaults).
+enum Preferences {
+    static let startOnLaunchKey = "startServicesOnLaunch"
+    static let stopOnQuitKey = "stopServicesOnQuit"
+
+    static func register() {
+        UserDefaults.standard.register(defaults: [startOnLaunchKey: false, stopOnQuitKey: true])
+    }
+
+    static var startOnLaunch: Bool { UserDefaults.standard.bool(forKey: startOnLaunchKey) }
+    static var stopOnQuit: Bool { UserDefaults.standard.bool(forKey: stopOnQuitKey) }
+}
+
 @MainActor
 @Observable
 final class ValetModel {
+    /// The app's single model, shared by the menu, the settings window and the app delegate.
+    static let shared = ValetModel()
+
     var install: InstallState = .unknown
     var running: Bool?
     var sites: [ValetSite] = []
     var proxies: [ValetProxy] = []
+    var parkedPaths: [String] = []
     var phpFormulas: [PHPFormula] = []
     var globalPHP: String?
     var tld = "test"
+    var valetVersion: String?
+    var versions: [ComponentVersion] = []
+    var trusted = false
     var mariadbInstalled = false
     var mariadbRunning: Bool?
     var yerdDetected = false
+    var launchAtLogin = SMAppService.mainApp.status == .enabled
 
     var busyLabel: String?
     var lastMessage: String?
@@ -59,7 +90,7 @@ final class ValetModel {
     private var lastRefresh: Date?
 
     init() {
-        // Rafraîchit quand l'utilisateur ouvre le menu de la barre de menus (aucun minuteur).
+        // Refresh when the user opens the menu bar menu (no timer).
         NotificationCenter.default.addObserver(forName: NSMenu.didBeginTrackingNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self else { return }
@@ -72,6 +103,7 @@ final class ValetModel {
 
     static let brew = "\(Shell.brewPrefix)/bin/brew"
     private static let home = Shell.home
+    static let valetConfigDir = "\(Shell.home)/.config/valet"
 
     var isInstalled: Bool {
         if case .installed = install { return true }
@@ -89,13 +121,13 @@ final class ValetModel {
     var statusText: String {
         if let busy = busyLabel { return "\(busy)…" }
         switch install {
-        case .unknown: return "Vérification…"
-        case .notInstalled: return "Valet non installé"
+        case .unknown: return String(localized: "Checking…")
+        case .notInstalled: return String(localized: "Valet not installed")
         case .installed:
             switch running {
-            case .some(true): return "Valet démarré"
-            case .some(false): return "Valet arrêté"
-            case .none: return "État inconnu"
+            case .some(true): return String(localized: "Valet running")
+            case .some(false): return String(localized: "Valet stopped")
+            case .none: return String(localized: "Unknown state")
             }
         }
     }
@@ -103,6 +135,10 @@ final class ValetModel {
     var valetBinary: String? {
         if case let .installed(binary) = install { return binary }
         return nil
+    }
+
+    var appVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
     }
 
     func displayURL(_ site: ValetSite) -> String {
@@ -113,7 +149,7 @@ final class ValetModel {
         proxy.url.isEmpty ? "\(proxy.secured ? "https" : "http")://\(proxy.name).\(tld)" : proxy.url
     }
 
-    // MARK: - Détection
+    // MARK: - Detection
 
     private static func locateValet() -> String? {
         let candidates = [
@@ -125,7 +161,19 @@ final class ValetModel {
         return candidates.first { FileManager.default.isExecutableFile(atPath: $0) }
     }
 
-    /// Lit les formules PHP depuis <prefix>/opt sans lancer `brew` (instantané).
+    /// Version of a Homebrew formula, read from its `opt` symlink (instant, no `brew` call).
+    nonisolated static func formulaVersion(_ name: String) -> String? {
+        guard let target = try? FileManager.default.destinationOfSymbolicLink(atPath: "\(Shell.brewPrefix)/opt/\(name)") else { return nil }
+        return versionFromCellarPath(target)
+    }
+
+    /// `../Cellar/php@8.4/8.4.27_1` → `8.4.27`
+    nonisolated static func versionFromCellarPath(_ path: String) -> String? {
+        guard let last = path.split(separator: "/").last else { return nil }
+        return last.split(separator: "_").first.map(String.init)
+    }
+
+    /// Reads PHP formulae from `<prefix>/opt` without running `brew` (instant).
     private static func scanPHPFormulas() -> (formulas: [PHPFormula], global: String?) {
         let fm = FileManager.default
         let optDir = "\(Shell.brewPrefix)/opt"
@@ -133,11 +181,10 @@ final class ValetModel {
         let entries = (try? fm.contentsOfDirectory(atPath: optDir)) ?? []
         for entry in entries where entry == "php" || entry.hasPrefix("php@") {
             guard let target = try? fm.destinationOfSymbolicLink(atPath: "\(optDir)/\(entry)") else { continue }
-            // ../Cellar/php@8.4/8.4.27_1 → formule « php@8.4 », version « 8.4.27 »
             let parts = target.split(separator: "/")
             guard parts.count >= 2 else { continue }
             let formula = String(parts[parts.count - 2])
-            let full = String(parts[parts.count - 1]).split(separator: "_").first.map(String.init) ?? ""
+            let full = versionFromCellarPath(target) ?? ""
             let short = full.split(separator: ".").prefix(2).joined(separator: ".")
             byFormula[formula] = PHPFormula(formula: formula, version: short)
         }
@@ -153,14 +200,14 @@ final class ValetModel {
     }
 
     private static func readTLD() -> String {
-        let url = URL(fileURLWithPath: "\(home)/.config/valet/config.json")
+        let url = URL(fileURLWithPath: "\(valetConfigDir)/config.json")
         guard let data = try? Data(contentsOf: url),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let tld = json["tld"] as? String else { return "test" }
         return tld
     }
 
-    // MARK: - Rafraîchissement
+    // MARK: - Refresh
 
     func refresh() async {
         guard !isRefreshing else { return }
@@ -175,6 +222,8 @@ final class ValetModel {
         phpFormulas = php.formulas
         globalPHP = php.global
         mariadbInstalled = FileManager.default.fileExists(atPath: "\(Shell.brewPrefix)/opt/mariadb")
+        trusted = FileManager.default.fileExists(atPath: "/etc/sudoers.d/valet")
+        launchAtLogin = SMAppService.mainApp.status == .enabled
 
         async let mariadb = mariadbInstalled ? Self.queryMariaDB() : nil
 
@@ -183,17 +232,36 @@ final class ValetModel {
             tld = Self.readTLD()
             async let status = Shell.run(binary, ["status"])
             async let links = Shell.run(binary, ["links"])
+            async let parked = Shell.run(binary, ["parked"])
             async let proxiesOut = Shell.run(binary, ["proxies"])
-            let (s, l, p) = await (status, links, proxiesOut)
+            async let paths = Shell.run(binary, ["paths"])
+            // The Valet version never changes while the app runs: ask once.
+            async let version = valetVersion == nil ? Shell.run(binary, ["--version"]) : nil
+            let (s, l, pk, p, pa, v) = await (status, links, parked, proxiesOut, paths, version)
             running = s.succeeded
-            sites = Self.parseSites(l.output)
+            let linked = Self.parseSites(l.output)
+            let linkedNames = Set(linked.map(\.name))
+            sites = linked + Self.parseSites(pk.output, parked: true).filter { !linkedNames.contains($0.name) }
             proxies = Self.parseProxies(p.output)
+            parkedPaths = Self.parsePaths(pa.output)
+            if let v, v.succeeded { valetVersion = Self.parseValetVersion(v.output) }
         } else {
             install = .notInstalled
             running = nil
             sites = []
             proxies = []
+            parkedPaths = []
+            valetVersion = nil
         }
+        versions = [
+            ComponentVersion(name: "PureValet", version: appVersion),
+            ComponentVersion(name: "Laravel Valet", version: valetVersion),
+            ComponentVersion(name: "PHP", version: globalPHP.flatMap { Self.formulaVersion($0) }),
+            ComponentVersion(name: "nginx", version: Self.formulaVersion("nginx")),
+            ComponentVersion(name: "dnsmasq", version: Self.formulaVersion("dnsmasq")),
+            ComponentVersion(name: "Composer", version: Self.formulaVersion("composer")),
+            ComponentVersion(name: "MariaDB", version: Self.formulaVersion("mariadb")),
+        ]
         mariadbRunning = await mariadb
     }
 
@@ -206,9 +274,9 @@ final class ValetModel {
         return first["running"] as? Bool
     }
 
-    // MARK: - Analyse des tableaux de Valet
+    // MARK: - Parsing Valet output
 
-    /// Valet affiche des tableaux Symfony (`| Site | SSL | URL | … |`). On les lit par nom de colonne.
+    /// Valet prints Symfony tables (`| Site | SSL | URL | … |`). Columns are read by name.
     nonisolated static func parseTable(_ text: String) -> [[String: String]] {
         let rows = text.split(separator: "\n")
             .map { $0.trimmingCharacters(in: .whitespaces) }
@@ -233,7 +301,7 @@ final class ValetModel {
         return value == "x" || value == "✓" || value == "yes" || value == "true"
     }
 
-    nonisolated static func parseSites(_ text: String) -> [ValetSite] {
+    nonisolated static func parseSites(_ text: String, parked: Bool = false) -> [ValetSite] {
         parseTable(text).compactMap { row in
             guard let name = row["site"], !name.isEmpty else { return nil }
             return ValetSite(
@@ -241,7 +309,8 @@ final class ValetModel {
                 secured: isSecure(row["ssl"]),
                 url: row["url"] ?? "",
                 path: row["path"] ?? "",
-                php: row["php version"] ?? row["php"] ?? ""
+                php: row["php version"] ?? row["php"] ?? "",
+                parked: parked
             )
         }
     }
@@ -253,11 +322,26 @@ final class ValetModel {
         }
     }
 
+    /// `valet paths` prints a JSON array of parked folders.
+    nonisolated static func parsePaths(_ text: String) -> [String] {
+        guard let start = text.firstIndex(of: "["), let end = text.lastIndex(of: "]"), start < end,
+              let data = String(text[start...end]).data(using: .utf8),
+              let paths = try? JSONSerialization.jsonObject(with: data) as? [String] else { return [] }
+        return paths
+    }
+
+    /// `Laravel Valet 4.8.1` → `4.8.1`
+    nonisolated static func parseValetVersion(_ text: String) -> String? {
+        text.split(whereSeparator: \.isWhitespace)
+            .last { $0.first?.isNumber == true }
+            .map(String.init)
+    }
+
     // MARK: - Actions
 
     private func valet(_ label: String, _ args: [String], cwd: URL? = nil) async {
         guard case let .installed(binary) = install else {
-            report(label, CommandResult(status: 1, output: "Valet n'est pas installé."))
+            report(label, CommandResult(status: 1, output: String(localized: "Valet is not installed.")))
             return
         }
         await execute(label) { await Shell.run(binary, args, cwd: cwd, allowSudoPrompt: true) }
@@ -276,12 +360,12 @@ final class ValetModel {
         lastOutput = result.output.trimmingCharacters(in: .whitespacesAndNewlines)
         lastFailed = !result.succeeded
         if result.succeeded {
-            lastMessage = "\(label) : OK"
+            lastMessage = String(localized: "\(label): done")
         } else if Self.isSudoFailure(result.output) {
-            lastMessage = "\(label) : droits administrateur refusés ou mot de passe annulé. "
-                + "Relance l'action, ou lance la commande dans un Terminal."
+            lastMessage = String(localized: "\(label): administrator rights denied or password cancelled. Try again, or run the command in Terminal.")
         } else {
-            lastMessage = "\(label) : échec (code \(result.status))"
+            let code = String(result.status)
+            lastMessage = String(localized: "\(label): failed (exit code \(code))")
         }
     }
 
@@ -290,11 +374,13 @@ final class ValetModel {
         return o.contains("sudo:") && (o.contains("password") || o.contains("askpass") || o.contains("terminal"))
     }
 
-    func start() async { await valet("Démarrage de Valet", ["start"]) }
-    func stop() async { await valet("Arrêt de Valet", ["stop"]) }
+    func start() async { await valet(String(localized: "Starting Valet"), ["start"]) }
+    func stop() async { await valet(String(localized: "Stopping Valet"), ["stop"]) }
+    func restart() async { await valet(String(localized: "Restarting Valet"), ["restart"]) }
+    func trust() async { await valet(String(localized: "Enabling password-free commands"), ["trust"]) }
 
     func useGlobalPHP(_ formula: String) async {
-        await valet("PHP global → \(formula)", ["use", formula])
+        await valet(String(localized: "Global PHP → \(formula)"), ["use", formula])
     }
 
     func isolate(_ site: ValetSite, formula: String) async {
@@ -302,35 +388,51 @@ final class ValetModel {
     }
 
     func unisolate(_ site: ValetSite) async {
-        await valet("\(site.name) → PHP global", ["unisolate", "--site=\(site.name)"])
+        await valet(String(localized: "\(site.name) → global PHP"), ["unisolate", "--site=\(site.name)"])
     }
 
     func setSecure(_ site: ValetSite, _ secure: Bool) async {
-        await valet(secure ? "HTTPS pour \(site.name)" : "HTTP pour \(site.name)", [secure ? "secure" : "unsecure", site.name])
+        let label = secure ? String(localized: "HTTPS for \(site.name)") : String(localized: "HTTP for \(site.name)")
+        await valet(label, [secure ? "secure" : "unsecure", site.name])
     }
 
     func unlink(_ site: ValetSite) async {
-        await valet("Unlink \(site.name)", ["unlink", site.name])
+        await valet(String(localized: "Unlink \(site.name)"), ["unlink", site.name])
     }
 
-    /// Demande un dossier puis lance `valet link <nom>` dedans.
-    func chooseAndLinkFolder() async {
+    private func chooseFolder(prompt: String, message: String) -> URL? {
         NSApp.activate(ignoringOtherApps: true)
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        panel.prompt = "Lier"
-        panel.message = "Choisis le dossier du site à lier à Valet"
-        guard panel.runModal() == .OK, let folder = panel.url else { return }
+        panel.prompt = prompt
+        panel.message = message
+        return panel.runModal() == .OK ? panel.url : nil
+    }
+
+    /// Asks for a folder, then runs `valet link <name>` inside it.
+    func chooseAndLinkFolder() async {
+        guard let folder = chooseFolder(prompt: String(localized: "Link"), message: String(localized: "Choose the site folder to link to Valet")) else { return }
         let name = Self.slug(folder.lastPathComponent)
-        await valet("Link \(name)", ["link", name], cwd: folder)
+        await valet(String(localized: "Link \(name)"), ["link", name], cwd: folder)
+    }
+
+    /// Asks for a folder, then runs `valet park` inside it: each subfolder becomes a site.
+    func chooseAndParkFolder() async {
+        guard let folder = chooseFolder(prompt: String(localized: "Park"), message: String(localized: "Choose a folder: each subfolder will be served as a site")) else { return }
+        await valet(String(localized: "Park \(folder.lastPathComponent)"), ["park"], cwd: folder)
+    }
+
+    func forget(_ path: String) async {
+        let name = URL(fileURLWithPath: path).lastPathComponent
+        await valet(String(localized: "Forget \(name)"), ["forget", path])
     }
 
     func addProxy(name: String, port: Int, secure: Bool) async {
         let site = Self.slug(name)
         guard !site.isEmpty, (1...65535).contains(port) else {
-            report("Proxy", CommandResult(status: 1, output: "Nom ou port invalide."))
+            report(String(localized: "Proxy"), CommandResult(status: 1, output: String(localized: "Invalid name or port.")))
             return
         }
         var args = ["proxy", site, "http://127.0.0.1:\(port)"]
@@ -343,10 +445,63 @@ final class ValetModel {
     }
 
     func setMariaDB(_ start: Bool) async {
-        await execute(start ? "Démarrage de MariaDB" : "Arrêt de MariaDB") {
-            await Shell.run(Self.brew, ["services", start ? "start" : "stop", "mariadb"])
+        let label = start ? String(localized: "Starting MariaDB") : String(localized: "Stopping MariaDB")
+        await execute(label) {
+            // `run` starts MariaDB without registering it to launch at login.
+            await Shell.run(Self.brew, ["services", start ? "run" : "stop", "mariadb"])
         }
     }
+
+    var anyServiceRunning: Bool { running == true || mariadbRunning == true }
+    var anyServiceStopped: Bool { (isInstalled && running != true) || (mariadbInstalled && mariadbRunning != true) }
+
+    /// Starts Valet (nginx, PHP-FPM, dnsmasq) and MariaDB if installed.
+    func startAll() async {
+        if isInstalled && running != true { await start() }
+        if mariadbInstalled && mariadbRunning != true { await setMariaDB(true) }
+    }
+
+    /// Stops Valet and MariaDB.
+    func stopAll() async {
+        if isInstalled && running == true { await stop() }
+        if mariadbInstalled && mariadbRunning == true { await setMariaDB(false) }
+    }
+
+    /// Called when the app quits: stops whatever is still running so nothing is left in the background
+    /// (and nothing restarts at the next boot, since `valet stop` unregisters the launchd services).
+    /// Ignores the busy flag on purpose: quitting must always proceed.
+    func stopEverythingForQuit() async {
+        await refresh()
+        if case let .installed(binary) = install, running == true {
+            _ = await Shell.run(binary, ["stop"], allowSudoPrompt: true)
+        }
+        if mariadbInstalled, mariadbRunning == true {
+            _ = await Shell.run(Self.brew, ["services", "stop", "mariadb"])
+        }
+    }
+
+    func setLaunchAtLogin(_ enabled: Bool) {
+        do {
+            if enabled {
+                try SMAppService.mainApp.register()
+            } else {
+                try SMAppService.mainApp.unregister()
+            }
+            lastFailed = false
+            lastMessage = enabled ? String(localized: "PureValet will open at login") : String(localized: "PureValet will no longer open at login")
+            lastOutput = ""
+        } catch {
+            lastFailed = true
+            lastMessage = String(localized: "Could not change the login item")
+            lastOutput = error.localizedDescription
+            if SMAppService.mainApp.status == .requiresApproval {
+                SMAppService.openSystemSettingsLoginItems()
+            }
+        }
+        launchAtLogin = SMAppService.mainApp.status == .enabled
+    }
+
+    // MARK: - Shortcuts (Finder, browser, Terminal)
 
     func open(_ site: ValetSite) {
         if let url = URL(string: displayURL(site)) { NSWorkspace.shared.open(url) }
@@ -356,12 +511,31 @@ final class ValetModel {
         if let url = URL(string: displayURL(proxy)) { NSWorkspace.shared.open(url) }
     }
 
-    func reveal(_ site: ValetSite) {
-        guard !site.path.isEmpty else { return }
-        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: site.path)])
+    func copyURL(_ site: ValetSite) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(displayURL(site), forType: .string)
     }
 
-    /// Nom de site sûr pour Valet : minuscules, chiffres et tirets.
+    func reveal(_ path: String) {
+        guard !path.isEmpty else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+    }
+
+    func openInTerminal(_ path: String) {
+        guard !path.isEmpty,
+              let terminal = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.Terminal") else { return }
+        NSWorkspace.shared.open([URL(fileURLWithPath: path)], withApplicationAt: terminal, configuration: NSWorkspace.OpenConfiguration())
+    }
+
+    func openLogs() { openFolder("\(Self.valetConfigDir)/Log") }
+    func openConfig() { openFolder(Self.valetConfigDir) }
+
+    private func openFolder(_ path: String) {
+        let target = FileManager.default.fileExists(atPath: path) ? path : Self.valetConfigDir
+        NSWorkspace.shared.open(URL(fileURLWithPath: target))
+    }
+
+    /// Safe Valet site name: lowercase letters, digits and dashes.
     nonisolated static func slug(_ raw: String) -> String {
         let lowered = raw.lowercased()
         let mapped = lowered.map { $0.isLetter && $0.isASCII || $0.isNumber ? $0 : "-" }

@@ -5,6 +5,7 @@ Issues and pull requests are welcome.
 ## Principles
 
 - **Stay light.** No background timers, no daemons, no helper process left running after quit. State is read when the menu opens and after each action.
+- **Leave nothing behind.** By default, quitting PureValet stops Valet and MariaDB (see `AppDelegate` in `App.swift`).
 - **Never install or reconfigure anything on the user's behalf.** The app only runs `valet` and `brew services` commands the user explicitly clicks.
 - **No dependencies.** Plain SwiftUI + Foundation, Swift Package Manager only.
 
@@ -12,7 +13,7 @@ Issues and pull requests are welcome.
 
 ```bash
 swift build          # debug build
-swift test           # unit tests (Valet table parsing, slug)
+swift test           # unit tests (Valet output parsing, versions, slug)
 ./build.sh           # release .app in build/
 ./scripts/make-dmg.sh  # DMG in build/
 ```
@@ -29,13 +30,15 @@ This writes one PNG per settings tab (`general.png`, `sites.png`, `proxies.png`,
 
 | File | Role |
 | --- | --- |
-| `Sources/PureValet/App.swift` | Entry point, `MenuBarExtra` (menu style), `--snapshot` mode |
+| `Sources/PureValet/App.swift` | Entry point, `MenuBarExtra` (menu style), `AppDelegate` (start at launch, stop at quit), `--snapshot` mode |
 | `Sources/PureValet/MenuContent.swift` | Native menu bar menu |
 | `Sources/PureValet/SettingsWindow.swift` | Settings window: sidebar + General / Sites / Proxies / About panes |
 | `Sources/PureValet/Shell.swift` | Runs commands with an explicit `PATH` and the `sudo` askpass helper |
 | `Sources/PureValet/ValetModel.swift` | Detection, parsing of Valet's tables, actions |
 | `scripts/make-icon.swift` | Builds `AppIcon.icns`, the menu bar template icon and `docs/icon.png` from `Resources/source/logo.png` |
 | `scripts/make-dmg.sh` | Builds the DMG and its SHA-256 |
+| `scripts/check-l10n.py` | Checks that every UI string has a French translation |
+| `Resources/*.lproj/Localizable.strings` | Translations (English keys) |
 
 ## Releasing
 
@@ -49,4 +52,21 @@ gh release create vX.Y.Z build/PureValet-X.Y.Z.dmg build/PureValet-X.Y.Z.dmg.sha
 
 ## Localization
 
-The UI is currently in French. English strings / a String Catalog are a welcome contribution.
+English is the development language: UI strings are written in English directly in the code
+(`Text("…")`, `Button("…")`, `String(localized: "…")`), and the English text is the key.
+Translations live in `Resources/<lang>.lproj/Localizable.strings` (currently `fr`).
+
+After adding or changing a string, update the French file and run:
+
+```bash
+python3 scripts/check-l10n.py
+```
+
+It lists missing and unused keys (CI fails on missing keys). Use `Text(verbatim:)` for text that must not be translated.
+To add a language, create `Resources/<lang>.lproj/Localizable.strings` and add the code to the `for lang in …` loop in `build.sh` and to `CFBundleLocalizations`.
+
+To try the app in another language without changing macOS:
+
+```bash
+build/PureValet.app/Contents/MacOS/PureValet -AppleLanguages '(fr)'
+```

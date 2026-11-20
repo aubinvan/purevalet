@@ -5,7 +5,7 @@
 <h1 align="center">PureValet</h1>
 
 <p align="center">
-  Une petite appli macOS native, dans la barre de menus, pour piloter <a href="https://laravel.com/docs/valet">Laravel Valet</a> sans terminal.<br>
+  Une petite appli macOS native, dans la barre de menus, qui fait tourner tout votre environnement <a href="https://laravel.com/docs/valet">Laravel Valet</a>, sans terminal.<br>
   <a href="README.md">English version</a>
 </p>
 
@@ -15,41 +15,51 @@
   <img src="docs/screenshot-general.png" width="640" alt="Fenêtre de réglages de PureValet">
 </p>
 
-Valet est l'environnement PHP local le plus léger sur macOS (nginx + dnsmasq + php-fpm, sans Docker ni VM), mais il ne s'utilise qu'en ligne de commande. PureValet met les commandes courantes à un clic, sans rien alourdir :
+Valet est l’environnement PHP local le plus léger sur macOS (nginx + PHP-FPM + dnsmasq, sans Docker ni VM), mais il ne s’utilise qu’en ligne de commande et ses services tournent tant qu’on ne les arrête pas. PureValet en fait une appli qu’on ouvre pour travailler et qu’on quitte quand on a fini :
 
-- **SwiftUI natif**, DMG d'environ 560 Ko, universel (Apple Silicon + Intel), aucune dépendance.
-- **Rien ne tourne en fond.** Pas de minuteur, pas de démon. L'état est relu à l'ouverture du menu ou de la fenêtre, et après chaque action. Une fois l'appli quittée, il ne reste aucun processus.
-- **N'installe rien.** Si Valet est absent, l'appli l'affiche et donne la commande à lancer toi-même.
+- **On ouvre PureValet → la pile tourne.** Valet (nginx, PHP-FPM, dnsmasq) et MariaDB Homebrew se démarrent depuis le menu, ou automatiquement au lancement.
+- **On quitte PureValet → tout s’arrête.** Valet et MariaDB sont arrêtés et désenregistrés de launchd : rien ne tourne en fond, rien ne redémarre avec le Mac.
+- **Natif et léger.** SwiftUI, DMG de moins de 1 Mo, universel (Apple Silicon + Intel), aucune dépendance, aucun minuteur, aucun démon.
+- **N’installe rien.** Si Valet est absent, PureValet l’affiche et donne la commande à lancer vous-même.
+- **Anglais et français.** L’appli suit la langue de macOS.
 
 > Projet communautaire, non affilié à Laravel.
 
 ## Interface
 
-Inspirée de [Hex](https://hex.audio) : un menu natif tout simple dans la barre de menus pour les actions courantes, et une fenêtre de réglages pour le reste.
+Inspirée de [Hex](https://hex.audio) : un menu natif simple pour les actions courantes, et une fenêtre de réglages pour le reste.
 
-- **Menu de la barre de menus** : état, Démarrer / Arrêter Valet, *Sites* (ouvrir dans le navigateur, lier un dossier), *Proxys*, *PHP global* (coche sur la version active), MariaDB, **Réglages… ⌘,**, **Quitter ⌘Q**.
-- **Fenêtre de réglages** avec barre latérale : *Général* (état, PHP global, MariaDB, aide à l'installation), *Sites* (HTTPS, PHP par site, Finder, unlink), *Proxys* (liste, ajout, suppression), *À propos*. La fenêtre est créée à l'ouverture et libérée à la fermeture.
+- **Menu de la barre de menus** : état, *Tout démarrer* / *Tout arrêter*, Démarrer / Redémarrer / Arrêter Valet, *Sites* (ouvrir, lier ou parquer un dossier), *Proxys*, *PHP global* (coche sur la version active), *Logs et fichiers*, MariaDB, **Réglages… ⌘,**, **Quitter ⌘Q**.
+- **Fenêtre de réglages** avec barre latérale :
+  - *Général* : état, version du CLI Valet, domaine, dossiers des logs et de la configuration, PHP global, commandes sans mot de passe, MariaDB, comportement de l’appli (démarrage au lancement, arrêt en quittant, ouverture à la connexion).
+  - *Sites* : sites liés et parqués, HTTPS, PHP par site, copier l’URL, Finder, Terminal, délier ; dossiers parqués (parquer / oublier).
+  - *Proxys* : liste, ajout, suppression.
+  - *À propos* : versions de PureValet, Valet, PHP, nginx, dnsmasq, Composer et MariaDB.
+
+Le logo de la barre de menus est atténué quand Valet est arrêté.
 
 ## Fonctions
 
-| Domaine | Ce que tu peux faire | Commande Valet / Homebrew |
+| Domaine | Ce que vous pouvez faire | Commande utilisée |
 | --- | --- | --- |
-| État | Voir démarré / arrêté / **non installé**, Start / Stop | `valet status`, `valet start`, `valet stop` |
-| Sites | Lister les sites liés, les ouvrir dans le navigateur, les afficher dans le Finder | `valet links` |
-| Link | Choisir un dossier et le lier | `valet link <nom>` |
-| HTTPS | Activer / désactiver HTTPS pour un site | `valet secure`, `valet unsecure` |
-| PHP | Changer la version de PHP globale | `valet use php@X` |
-| PHP par site | Isoler un site sur une version de PHP, ou revenir au global | `valet isolate`, `valet unisolate` |
-| Proxys | Rediriger `nom.test` vers un port local (Node, Vite…), le supprimer | `valet proxy <nom> http://127.0.0.1:<port> [--secure]`, `valet unproxy` |
-| MariaDB | Démarrer / arrêter MariaDB Homebrew (s'il est installé) | `brew services start\|stop mariadb` |
+| Services | Tout démarrer / arrêter d’un coup, au lancement ou en quittant | `valet start\|stop`, `brew services run\|stop mariadb` |
+| Valet | Démarrer, redémarrer, arrêter, voir la version du CLI | `valet start\|restart\|stop`, `valet --version` |
+| Sites | Sites liés et parqués : ouvrir, copier l’URL, Finder, Terminal | `valet links`, `valet parked` |
+| Lier / Parquer | Lier un dossier, ou parquer un dossier de projets ; l’oublier | `valet link`, `valet park`, `valet forget` |
+| HTTPS | Activer / désactiver HTTPS | `valet secure`, `valet unsecure` |
+| PHP | Version globale, ou une version par site | `valet use`, `valet isolate`, `valet unisolate` |
+| Proxys | Rediriger `nom.test` vers un port local (Node, Vite…) | `valet proxy`, `valet unproxy` |
+| Mot de passe | Supprimer les invites de mot de passe | `valet trust` |
+| Fichiers | Ouvrir les logs et la configuration de Valet | `~/.config/valet` |
+| MariaDB | Démarrer / arrêter MariaDB Homebrew (jamais enregistrée à la connexion) | `brew services run\|stop mariadb` |
 
-L'appli prévient aussi si Yerd est présent (même ports 80/443 et même DNS `.test`).
+PureValet prévient aussi si Yerd est installé (mêmes ports 80/443, même DNS `.test`, même port 3306).
 
 ## Prérequis
 
 - macOS 14 Sonoma ou plus récent
 - Homebrew (`/opt/homebrew` ou `/usr/local`)
-- Laravel Valet installé via Composer :
+- Laravel Valet, installé via Composer :
 
 ```bash
 composer global require laravel/valet
@@ -61,17 +71,13 @@ valet install
 
 ## Installation
 
-1. Télécharge `PureValet-x.y.z.dmg` depuis la [dernière version](https://github.com/aubinvan/purevalet/releases/latest).
-2. Ouvre-le et glisse **PureValet** dans **Applications**.
-3. Premier lancement : l'appli est signée ad hoc mais **pas notarisée** (pas de compte Apple Developer payant), macOS la bloque donc une fois. Au choix :
-   - lance-la, puis **Réglages Système → Confidentialité et sécurité → Ouvrir quand même** ;
-   - ou retire l'attribut de quarantaine :
+1. Téléchargez `PureValet-x.y.z.dmg` depuis la [dernière version](https://github.com/aubinvan/purevalet/releases/latest).
+2. Ouvrez-le et glissez **PureValet** dans **Applications**.
+3. Premier lancement : l’appli est signée ad hoc mais **pas notarisée** (pas de compte Apple Developer payant), macOS la bloque donc une fois. Lancez-la puis **Réglages Système → Confidentialité et sécurité → Ouvrir quand même**, ou retirez l’attribut de quarantaine :
 
 ```bash
 xattr -dr com.apple.quarantine "/Applications/PureValet.app"
 ```
-
-Le logo **V** apparaît dans la barre de menus (pas dans le Dock) ; il est atténué quand Valet est arrêté. Clic pour le menu, **Réglages…** (⌘,) pour la fenêtre complète, **Quitter** (⌘Q) pour tout fermer.
 
 Vérifier le téléchargement avec le fichier `.sha256` joint à la version :
 
@@ -79,11 +85,23 @@ Vérifier le téléchargement avec le fichier `.sha256` joint à la version :
 shasum -a 256 -c PureValet-x.y.z.dmg.sha256
 ```
 
+## Démarrage et arrêt
+
+Dans **Réglages → Général → Application** :
+
+| Option | Par défaut | Effet |
+| --- | --- | --- |
+| Démarrer les services à l’ouverture de PureValet | Désactivé | Démarre Valet et MariaDB au lancement |
+| Arrêter tous les services en quittant | **Activé** | Arrête Valet et MariaDB quand vous quittez PureValet (ou fermez la session / éteignez le Mac) |
+| Ouvrir à la connexion | Désactivé | Ouvre PureValet à l’ouverture de session |
+
+Pourquoi c’est important : `valet start` enregistre nginx, PHP-FPM et dnsmasq auprès de launchd. Sans PureValet, ils continueraient de tourner et redémarreraient à chaque démarrage du Mac. Quitter PureValet les arrête et les désenregistre. MariaDB est démarrée avec `brew services run`, qui ne l’enregistre jamais à la connexion.
+
 ## Mot de passe administrateur (`sudo`)
 
-Valet relance certaines commandes avec `sudo` (start, stop, use, secure, isolate…). L'appli n'a pas de terminal : elle fournit à `sudo` un *askpass*, une boîte de dialogue macOS standard qui demande ton mot de passe. Il va directement à `sudo`, l'appli ne le lit ni ne le garde. Si tu annules, un message clair s'affiche (bouton **Détails** pour la sortie complète).
+Valet relance certaines commandes avec `sudo` (start, stop, use, secure, isolate…). L’appli n’a pas de terminal : elle fournit à `sudo` un *askpass*, une boîte de dialogue macOS standard. Le mot de passe va directement à `sudo`, PureValet ne le lit ni ne le garde.
 
-Pour ne plus avoir d'invite : `valet trust` (règles sudoers pour `valet` et `brew`), à lancer toi-même si tu le souhaites.
+Pour ne plus avoir d’invite (recommandé avec *Arrêter tous les services en quittant*) : **Réglages → Général → Commandes sans mot de passe → Activer…**, qui lance une fois `valet trust`.
 
 ## Compiler depuis les sources
 
@@ -98,7 +116,7 @@ git clone https://github.com/aubinvan/purevalet.git && cd purevalet
 ```
 
 ```bash
-open "build/PureValet.app"
+open build/PureValet.app
 ```
 
 Créer le DMG (dans `build/`, avec son SHA-256) :
@@ -107,19 +125,23 @@ Créer le DMG (dans `build/`, avec son SHA-256) :
 ./scripts/make-dmg.sh
 ```
 
-Lancer les tests :
+Lancer les tests et la vérification des traductions :
 
 ```bash
 swift test
 ```
 
-Structure du code et procédure de publication : [CONTRIBUTING.md](CONTRIBUTING.md).
+```bash
+python3 scripts/check-l10n.py
+```
+
+Structure du code, traductions et publication : [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Limites
 
 - Pas notarisée (voir Installation).
-- Testée uniquement sur Apple Silicon ; la version Intel (Homebrew dans `/usr/local`) n'est pas testée.
-- Les dossiers « parked » (`valet park`) ne sont pas encore gérés.
+- Testée sur Apple Silicon ; la version Intel n’est pas testée.
+- `valet share` et Expose ne sont pas gérés.
 
 ## Licence
 

@@ -3,6 +3,24 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] - 2026-11-20
+
+### Added
+- **PureValet drives the whole environment**: *Start All Services* / *Stop All Services*, optional start at launch, and **stop everything when quitting** (on by default). `valet stop` unregisters nginx, PHP-FPM and dnsmasq from launchd, so nothing keeps running or restarts at boot.
+- MariaDB is started with `brew services run` (never registered at login).
+- Valet CLI version, and versions of PHP, nginx, dnsmasq, Composer and MariaDB (About).
+- Restart Valet.
+- Parked folders: list, park, forget; parked sites appear in the site list.
+- Site actions: copy URL, open in Terminal.
+- Open the Valet logs and configuration folders.
+- Password-free commands (`valet trust`) from the settings.
+- Open at login (`SMAppService`).
+- `scripts/check-l10n.py` (also run in CI) checks that every UI string is translated.
+
+### Changed
+- **English is now the default language**, with a full French translation; the app follows the macOS language.
+- Homebrew analytics and auto-update are disabled for the commands PureValet runs.
+
 ## [0.3.0] - 2026-11-20
 
 ### Changed

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Compile PureValet (binaire universel arm64 + x86_64) et assemble build/PureValet.app.
+# Builds PureValet (universal arm64 + x86_64 binary) and assembles build/PureValet.app.
 # Usage : ./build.sh
 set -eu
 cd "$(dirname "$0")"
@@ -15,6 +15,12 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/PureValet"
 cp Resources/AppIcon.icns Resources/MenuBarIcon.png Resources/MenuBarIcon@2x.png "$APP/Contents/Resources/"
+# Localizations: English (development language) and French.
+for lang in en fr; do
+    plutil -lint "Resources/$lang.lproj/Localizable.strings" >/dev/null
+    mkdir -p "$APP/Contents/Resources/$lang.lproj"
+    cp "Resources/$lang.lproj/Localizable.strings" "$APP/Contents/Resources/$lang.lproj/"
+done
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -22,6 +28,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key><string>PureValet</string>
+    <key>CFBundleDevelopmentRegion</key><string>en</string>
+    <key>CFBundleLocalizations</key><array><string>en</string><string>fr</string></array>
     <key>CFBundleDisplayName</key><string>PureValet</string>
     <key>CFBundleIdentifier</key><string>dev.aubin.purevalet</string>
     <key>CFBundleExecutable</key><string>PureValet</string>
@@ -38,6 +46,6 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
-# Signature ad hoc (pas de compte Apple Developer : l'appli n'est pas notarisée).
+# Ad-hoc signature (no Apple Developer account: the app is not notarized).
 codesign --force --sign - "$APP"
 echo "OK : $APP ($VERSION)"

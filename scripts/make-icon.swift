@@ -1,20 +1,20 @@
-// Génère, à partir de Resources/source/logo.png (fond transparent) :
-//   - Resources/AppIcon.icns       : icône de l'appli (logo sur carré arrondi blanc)
-//   - Resources/MenuBarIcon.png/@2x : icône « template » monochrome pour la barre de menus
-//   - docs/icon.png                : icône pour le README
-// Usage : swift scripts/make-icon.swift
+// Generates, from Resources/source/logo.png (transparent background):
+//   - Resources/AppIcon.icns        : app icon (logo on a white rounded square)
+//   - Resources/MenuBarIcon.png/@2x : monochrome template icon for the menu bar
+//   - docs/icon.png                 : icon for the README
+// Usage: swift scripts/make-icon.swift
 import AppKit
 
 let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
 let logoURL = root.appendingPathComponent("Resources/source/logo.png")
 guard let logo = NSImage(contentsOf: logoURL),
       let logoRep = logo.representations.first as? NSBitmapImageRep else {
-    fatalError("Logo introuvable : \(logoURL.path)")
+    fatalError("Logo not found: \(logoURL.path)")
 }
-// Travaille en pixels, quelle que soit la résolution (dpi) déclarée dans le PNG.
+// Work in pixels, whatever resolution (dpi) the PNG declares.
 logo.size = NSSize(width: logoRep.pixelsWide, height: logoRep.pixelsHigh)
 
-/// Zone non transparente du logo (en coordonnées AppKit, origine en bas à gauche).
+/// Non-transparent area of the logo (AppKit coordinates, origin bottom-left).
 let trimmed: NSRect = {
     var minX = logoRep.pixelsWide, minY = logoRep.pixelsHigh, maxX = 0, maxY = 0
     for y in 0..<logoRep.pixelsHigh {
@@ -39,7 +39,7 @@ func bitmap(_ w: Int, _ h: Int, _ draw: (NSRect) -> Void) -> NSBitmapImageRep {
     return rep
 }
 
-/// Dessine le logo rogné, centré dans `box`, en gardant ses proportions.
+/// Draws the trimmed logo centred in `box`, keeping its aspect ratio.
 func drawLogo(in box: NSRect) {
     let scale = min(box.width / trimmed.width, box.height / trimmed.height)
     let size = NSSize(width: trimmed.width * scale, height: trimmed.height * scale)
@@ -49,7 +49,7 @@ func drawLogo(in box: NSRect) {
 
 func png(_ rep: NSBitmapImageRep) -> Data { rep.representation(using: .png, properties: [:])! }
 
-// 1. Icône de l'appli : carré arrondi blanc (grille Apple : 824/1024), léger dégradé et ombre.
+// 1. App icon: white rounded square (Apple grid: 824/1024), subtle gradient and shadow.
 func appIcon(_ size: Int) -> NSBitmapImageRep {
     bitmap(size, size) { rect in
         let s = rect.width
@@ -86,7 +86,7 @@ try iconutil.run()
 iconutil.waitUntilExit()
 try png(appIcon(256)).write(to: root.appendingPathComponent("docs/icon.png"))
 
-// 2. Icône de barre de menus : silhouette noire (template), 18 pt de haut.
+// 2. Menu bar icon: black silhouette (template image), 18 pt high.
 func menuBarIcon(height: Int) -> NSBitmapImageRep {
     let width = Int((CGFloat(height) * trimmed.width / trimmed.height).rounded(.up))
     return bitmap(width, height) { rect in
@@ -98,4 +98,4 @@ func menuBarIcon(height: Int) -> NSBitmapImageRep {
 try png(menuBarIcon(height: 18)).write(to: root.appendingPathComponent("Resources/MenuBarIcon.png"))
 try png(menuBarIcon(height: 36)).write(to: root.appendingPathComponent("Resources/MenuBarIcon@2x.png"))
 
-print(iconutil.terminationStatus == 0 ? "OK : AppIcon.icns, MenuBarIcon.png, docs/icon.png" : "iconutil a échoué")
+print(iconutil.terminationStatus == 0 ? "OK : AppIcon.icns, MenuBarIcon.png, docs/icon.png" : "iconutil failed")

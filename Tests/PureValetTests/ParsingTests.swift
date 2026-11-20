@@ -29,6 +29,33 @@ final class ParsingTests: XCTestCase {
         XCTAssertTrue(ValetModel.parseSites("No links found.").isEmpty)
     }
 
+    func testParkedSitesAreFlagged() {
+        let output = """
+        +------+-----+------------------+------------------+-------------+
+        | Site | SSL | URL              | Path             | PHP Version |
+        +------+-----+------------------+------------------+-------------+
+        | api  |     | http://api.test  | /Users/a/Sites/api | php@8.3   |
+        +------+-----+------------------+------------------+-------------+
+        """
+        XCTAssertEqual(ValetModel.parseSites(output, parked: true).first?.parked, true)
+    }
+
+    func testParsesParkedPathsJSON() {
+        XCTAssertEqual(ValetModel.parsePaths("[\"/Users/a/Sites\",\"/Users/a/Code\"]\n"), ["/Users/a/Sites", "/Users/a/Code"])
+        XCTAssertEqual(ValetModel.parsePaths("[]"), [])
+        XCTAssertEqual(ValetModel.parsePaths("garbage"), [])
+    }
+
+    func testParsesValetVersion() {
+        XCTAssertEqual(ValetModel.parseValetVersion("Laravel Valet 4.8.1\n"), "4.8.1")
+        XCTAssertNil(ValetModel.parseValetVersion("command not found"))
+    }
+
+    func testVersionFromCellarPath() {
+        XCTAssertEqual(ValetModel.versionFromCellarPath("../Cellar/php@8.4/8.4.27_1"), "8.4.27")
+        XCTAssertEqual(ValetModel.versionFromCellarPath("../Cellar/nginx/1.29.3"), "1.29.3")
+    }
+
     func testSlug() {
         XCTAssertEqual(ValetModel.slug("Mon Projet_2"), "mon-projet-2")
     }

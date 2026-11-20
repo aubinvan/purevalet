@@ -17,6 +17,8 @@ jobs:
         run: swift --version
       - name: Test
         run: swift test
+      - name: Check translations
+        run: python3 scripts/check-l10n.py
       - name: Build app and DMG
         run: ./scripts/make-dmg.sh
       - name: Upload DMG

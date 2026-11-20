@@ -1,0 +1,152 @@
+/* PureValet — French translation. Keys are the English strings. Check with: python3 scripts/check-l10n.py */
+
+/* Status and messages */
+"Checking…" = "Vérification…";
+"Valet not installed" = "Valet non installé";
+"Valet running" = "Valet démarré";
+"Valet stopped" = "Valet arrêté";
+"Unknown state" = "État inconnu";
+"Valet is not installed." = "Valet n’est pas installé.";
+"%@: done" = "%@ : OK";
+"%@: administrator rights denied or password cancelled. Try again, or run the command in Terminal." = "%@ : droits administrateur refusés ou mot de passe annulé. Réessayez, ou lancez la commande dans le Terminal.";
+"%@: failed (exit code %@)" = "%@ : échec (code %@)";
+"Could not launch %@: %@" = "Impossible de lancer %@ : %@";
+"Invalid name or port." = "Nom ou port invalide.";
+"Could not change the login item" = "Impossible de modifier l’ouverture à la connexion";
+"PureValet will open at login" = "PureValet s’ouvrira à la connexion";
+"PureValet will no longer open at login" = "PureValet ne s’ouvrira plus à la connexion";
+
+/* Action labels */
+"Starting Valet" = "Démarrage de Valet";
+"Stopping Valet" = "Arrêt de Valet";
+"Restarting Valet" = "Redémarrage de Valet";
+"Enabling password-free commands" = "Activation des commandes sans mot de passe";
+"Global PHP → %@" = "PHP global → %@";
+"%@ → global PHP" = "%@ → PHP global";
+"HTTPS for %@" = "HTTPS pour %@";
+"HTTP for %@" = "HTTP pour %@";
+"Unlink %@" = "Délier %@";
+"Link %@" = "Lier %@";
+"Park %@" = "Parquer %@";
+"Forget %@" = "Oublier %@";
+"Proxy" = "Proxy";
+"Starting MariaDB" = "Démarrage de MariaDB";
+"Stopping MariaDB" = "Arrêt de MariaDB";
+
+/* sudo prompt */
+"Valet needs administrator rights (sudo).\n\nmacOS password:" = "Valet a besoin des droits administrateur (sudo).\n\nMot de passe macOS :";
+"Cancel" = "Annuler";
+
+/* Folder pickers */
+"Link" = "Lier";
+"Choose the site folder to link to Valet" = "Choisissez le dossier du site à lier à Valet";
+"Park" = "Parquer";
+"Choose a folder: each subfolder will be served as a site" = "Choisissez un dossier : chaque sous-dossier sera servi comme un site";
+
+/* Menu bar */
+"Restart Valet" = "Redémarrer Valet";
+"Stop Valet" = "Arrêter Valet";
+"Start Valet" = "Démarrer Valet";
+"Sites" = "Sites";
+"No sites" = "Aucun site";
+"Link a Folder…" = "Lier un dossier…";
+"Park a Folder…" = "Parquer un dossier…";
+"Proxies" = "Proxys";
+"No proxies" = "Aucun proxy";
+"Manage Proxies…" = "Gérer les proxys…";
+"Global PHP" = "PHP global";
+"Logs & Files" = "Logs et fichiers";
+"Open Logs Folder" = "Ouvrir le dossier des logs";
+"Open Valet Configuration" = "Ouvrir la configuration de Valet";
+"How to Install Valet…" = "Comment installer Valet…";
+"Stop MariaDB" = "Arrêter MariaDB";
+"Start MariaDB" = "Démarrer MariaDB";
+"Settings…" = "Réglages…";
+"Quit PureValet" = "Quitter PureValet";
+
+/* Settings window */
+"General" = "Général";
+"About" = "À propos";
+"Refresh" = "Actualiser";
+"Refresh Valet status" = "Actualiser l’état de Valet";
+"Details" = "Détails";
+
+/* General */
+"Valet" = "Valet";
+"Status" = "État";
+"Restart" = "Redémarrer";
+"Stop" = "Arrêter";
+"Start" = "Démarrer";
+"Valet CLI version" = "Version du CLI Valet";
+"Domain" = "Domaine";
+"Files" = "Fichiers";
+"Logs" = "Logs";
+"Configuration" = "Configuration";
+"PHP" = "PHP";
+"Global version" = "Version globale";
+"Same as `valet use`. An isolated site keeps its own version (Sites tab)." = "Équivaut à `valet use`. Un site isolé garde sa propre version (onglet Sites).";
+"Administrator password" = "Mot de passe administrateur";
+"Password-free commands" = "Commandes sans mot de passe";
+"Enabled" = "Activé";
+"Enable…" = "Activer…";
+"Runs `valet trust` once: adds sudoers rules for `valet` and `brew` so Start, Stop and Secure no longer ask for your password." = "Lance une fois `valet trust` : ajoute des règles sudoers pour `valet` et `brew`, pour que Démarrer, Arrêter et HTTPS ne demandent plus votre mot de passe.";
+"Database" = "Base de données";
+"MariaDB (Homebrew)" = "MariaDB (Homebrew)";
+"Running" = "Démarré";
+"Stopped" = "Arrêté";
+"Yerd has its own database: only one can listen on port 3306 at a time." = "Yerd a sa propre base de données : une seule peut écouter le port 3306 à la fois.";
+"App" = "Application";
+"Open at login" = "Ouvrir à la connexion";
+
+/* Installation */
+"Installation" = "Installation";
+"Valet is not installed on this Mac" = "Valet n’est pas installé sur ce Mac";
+"No `valet` binary found (global Composer or Homebrew). PureValet never installs anything itself: run these commands in Terminal, then click Refresh." = "Aucun binaire `valet` trouvé (Composer global ou Homebrew). PureValet n’installe jamais rien lui-même : lancez ces commandes dans le Terminal, puis cliquez sur Actualiser.";
+"Copy" = "Copier";
+"Yerd is installed: it also uses ports 80/443 and the .test DNS. Stop it before installing or starting Valet." = "Yerd est installé : il utilise aussi les ports 80/443 et le DNS .test. Arrêtez-le avant d’installer ou de démarrer Valet.";
+
+/* Sites */
+"No sites yet. Link a folder, or park a folder that contains your projects." = "Aucun site pour l’instant. Liez un dossier, ou parquez un dossier qui contient vos projets.";
+"Parked folders" = "Dossiers parqués";
+"No parked folders. Every subfolder of a parked folder is served as `folder-name.%@`." = "Aucun dossier parqué. Chaque sous-dossier d’un dossier parqué est servi en `nom-du-dossier.%@`.";
+"Show in Finder" = "Afficher dans le Finder";
+"Stop serving this folder (valet forget)" = "Ne plus servir ce dossier (valet forget)";
+"parked" = "parqué";
+"Switch to HTTP (unsecure)" = "Passer en HTTP (unsecure)";
+"Switch to HTTPS (secure)" = "Passer en HTTPS (secure)";
+"Site PHP Version" = "Version PHP du site";
+"Use Global PHP (unisolate)" = "Utiliser le PHP global (unisolate)";
+"Copy URL" = "Copier l’URL";
+"Open in Terminal" = "Ouvrir dans le Terminal";
+"Unlink" = "Délier";
+
+/* Proxies */
+"No proxies." = "Aucun proxy.";
+"Remove this proxy (valet unproxy)" = "Supprimer ce proxy (valet unproxy)";
+"Active proxies" = "Proxys actifs";
+"Name" = "Nom";
+"Local port" = "Port local";
+"HTTPS" = "HTTPS";
+"Add" = "Ajouter";
+"Add a proxy (Node, Vite…)" = "Ajouter un proxy (Node, Vite…)";
+
+/* About */
+"Laravel Valet in your menu bar" = "Laravel Valet dans la barre de menus";
+"Open source (MIT)" = "Open source (MIT)";
+"View on GitHub" = "Voir sur GitHub";
+"New versions" = "Nouvelles versions";
+"Releases" = "Versions publiées";
+"Versions" = "Versions";
+"not installed" = "non installé";
+"Valet binary" = "Binaire Valet";
+"Homebrew" = "Homebrew";
+"Environment" = "Environnement";
+"Community project, not affiliated with Laravel. No background task: state is read when you open the menu." = "Projet communautaire, non affilié à Laravel. Aucune tâche en arrière-plan : l’état est relu à l’ouverture du menu.";
+"Install Laravel Valet (see the General tab), then refresh." = "Installez Laravel Valet (voir l’onglet Général), puis actualisez.";
+
+/* Services lifecycle */
+"Start All Services" = "Tout démarrer";
+"Stop All Services" = "Tout arrêter";
+"Start services when PureValet opens" = "Démarrer les services à l’ouverture de PureValet";
+"Stop all services when quitting" = "Arrêter tous les services en quittant";
+"Services are Valet (nginx, PHP-FPM, dnsmasq) and Homebrew MariaDB. When PureValet quits, they are stopped and unregistered, so nothing keeps running or restarts at boot. Enable password-free commands to quit without a password prompt." = "Les services sont Valet (nginx, PHP-FPM, dnsmasq) et MariaDB Homebrew. Quand PureValet quitte, ils sont arrêtés et désenregistrés : rien ne continue de tourner ni ne redémarre avec le Mac. Activez les commandes sans mot de passe pour quitter sans invite de mot de passe.";

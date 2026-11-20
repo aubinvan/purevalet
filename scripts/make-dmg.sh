@@ -1,6 +1,6 @@
 #!/bin/sh
-# Crée build/PureValet-<version>.dmg (appli + raccourci vers /Applications) et son empreinte SHA-256.
-# Usage : ./scripts/make-dmg.sh   (reconstruit toujours l'appli avant)
+# Creates build/PureValet-<version>.dmg (app + /Applications shortcut) and its SHA-256.
+# Usage: ./scripts/make-dmg.sh   (always rebuilds the app first)
 set -eu
 cd "$(dirname "$0")/.."
 

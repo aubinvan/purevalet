@@ -3,12 +3,15 @@ import SwiftUI
 
 @main
 struct PureValetApp: App {
-    @State private var model = ValetModel()
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @State private var model = ValetModel.shared
 
     init() {
-        // `PureValet --snapshot <dossier>` : capture la fenêtre de réglages (un PNG par onglet) puis quitte.
+        Preferences.register()
+        // `PureValet --snapshot <folder>`: captures the settings window (one PNG per tab), then quits.
         let args = CommandLine.arguments
         if let i = args.firstIndex(of: "--snapshot"), i + 1 < args.count {
+            Snapshot.isActive = true
             Snapshot.render(into: URL(fileURLWithPath: args[i + 1]))
         }
     }
@@ -24,8 +27,40 @@ struct PureValetApp: App {
     }
 }
 
-/// Logo de la barre de menus : silhouette « template » (s'adapte au mode clair/sombre),
-/// atténuée quand Valet n'est pas démarré.
+/// Starts the services at launch (optional) and stops them when the app quits (default),
+/// so PureValet alone drives the whole environment and nothing is left running afterwards.
+@MainActor
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    private var quitting = false
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        guard !Snapshot.isActive, Preferences.startOnLaunch else { return }
+        Task {
+            await ValetModel.shared.refresh()
+            await ValetModel.shared.startAll()
+        }
+    }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard !Snapshot.isActive, Preferences.stopOnQuit, !quitting else { return .terminateNow }
+        quitting = true
+        var replied = false
+        let finish = {
+            guard !replied else { return }
+            replied = true
+            sender.reply(toApplicationShouldTerminate: true)
+        }
+        Task {
+            await ValetModel.shared.stopEverythingForQuit()
+            finish()
+        }
+        // Never block quitting (e.g. a password prompt left open): give up after 60 s.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 60) { finish() }
+        return .terminateLater
+    }
+}
+
+/// Menu bar logo: a template image (adapts to light/dark mode), dimmed while Valet is not running.
 struct MenuBarLabel: View {
     let model: ValetModel
 
@@ -61,6 +96,8 @@ enum MenuBarIcon {
 
 @MainActor
 enum Snapshot {
+    static var isActive = false
+
     static func render(into directory: URL) {
         Task { @MainActor in
             try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
