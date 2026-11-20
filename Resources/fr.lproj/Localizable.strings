@@ -94,7 +94,6 @@
 "MariaDB (Homebrew)" = "MariaDB (Homebrew)";
 "Running" = "Démarré";
 "Stopped" = "Arrêté";
-"Yerd has its own database: only one can listen on port 3306 at a time." = "Yerd a sa propre base de données : une seule peut écouter le port 3306 à la fois.";
 "App" = "Application";
 "Open at login" = "Ouvrir à la connexion";
 
@@ -173,3 +172,18 @@
 "Enable (recommended)" = "Activer (recommandé)";
 "Not now" = "Plus tard";
 "Don't ask again" = "Ne plus demander";
+
+/* phpMyAdmin */
+"phpMyAdmin" = "phpMyAdmin";
+"Open phpMyAdmin" = "Ouvrir phpMyAdmin";
+"Install phpMyAdmin…" = "Installer phpMyAdmin…";
+"Installing phpMyAdmin" = "Installation de phpMyAdmin";
+"Updating phpMyAdmin" = "Mise à jour de phpMyAdmin";
+"Open" = "Ouvrir";
+"Install…" = "Installer…";
+"Install PureValet's copy…" = "Installer la copie de PureValet…";
+"Update to %@" = "Mettre à jour vers %@";
+"Log in with your macOS user name (%@) and an empty password: MariaDB recognises your account through its local socket, so no password is stored. PureValet installs the official release (SHA-256 checked) in its Application Support folder and serves it on `phpmyadmin.%@`." = "Connectez-vous avec votre nom d’utilisateur macOS (%@) et un mot de passe vide : MariaDB reconnaît votre compte via son socket local, aucun mot de passe n’est donc stocké. PureValet installe la version officielle (empreinte SHA-256 vérifiée) dans son dossier Application Support et la sert sur `phpmyadmin.%@`.";
+"The phpMyAdmin download failed." = "Le téléchargement de phpMyAdmin a échoué.";
+"The downloaded phpMyAdmin archive does not match its official SHA-256 checksum." = "L’archive phpMyAdmin téléchargée ne correspond pas à son empreinte SHA-256 officielle.";
+"The phpMyAdmin archive could not be unpacked." = "L’archive phpMyAdmin n’a pas pu être décompressée.";

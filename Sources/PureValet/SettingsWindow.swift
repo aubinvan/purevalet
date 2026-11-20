@@ -222,9 +222,8 @@ struct GeneralPane: View {
                             Button("Start") { Task { await model.setMariaDB(true) } }
                         }
                     }
-                    if model.yerdDetected {
-                        Text("Yerd has its own database: only one can listen on port 3306 at a time.")
-                            .settingsCaption()
+                    if model.isInstalled {
+                        PhpMyAdminRow()
                     }
                 } header: {
                     Text("Database")
@@ -259,6 +258,35 @@ struct GeneralPane: View {
         case .some(false): return String(localized: "Stopped")
         case .none: return "…"
         }
+    }
+}
+
+struct PhpMyAdminRow: View {
+    @Environment(ValetModel.self) private var model
+
+    var body: some View {
+        HStack {
+            Label("phpMyAdmin", systemImage: "tablecells")
+            Spacer()
+            if let version = model.phpMyAdminVersion {
+                Text(verbatim: version).foregroundStyle(.secondary)
+                if model.phpMyAdminUpdateAvailable, let latest = model.phpMyAdminLatest?.version {
+                    Button("Update to \(latest)") { Task { await model.installPhpMyAdmin() } }
+                }
+                Button("Open") { model.openPhpMyAdmin() }
+                    .buttonStyle(.borderedProminent)
+            } else {
+                if model.phpMyAdminSite != nil {
+                    Button("Open") { model.openPhpMyAdmin() }
+                }
+                Button(model.phpMyAdminSite == nil ? LocalizedStringKey("Install…") : LocalizedStringKey("Install PureValet's copy…")) {
+                    Task { await model.installPhpMyAdmin() }
+                }
+            }
+        }
+        .task { await model.fetchPhpMyAdminLatest() }
+        Text("Log in with your macOS user name (\(NSUserName())) and an empty password: MariaDB recognises your account through its local socket, so no password is stored. PureValet installs the official release (SHA-256 checked) in its Application Support folder and serves it on `phpmyadmin.\(model.tld)`.")
+            .settingsCaption()
     }
 }
 

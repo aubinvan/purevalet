@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.7.0] - 2026-11-20
+
+### Added
+- **Built-in phpMyAdmin**: *Settings → General → Database → phpMyAdmin → Install…* (or *Install phpMyAdmin…* in the menu). PureValet downloads the latest official release, checks its SHA-256, installs it in `~/Library/Application Support/PureValet/phpMyAdmin`, writes a config for the local MariaDB socket and serves it on `https://phpmyadmin.test`. It runs on a PHP version phpMyAdmin supports (isolated automatically, e.g. PHP 8.3 when the global PHP is 8.5). Login: macOS user name and an empty password (MariaDB `unix_socket`), so no password is stored. *Update to x.y.z* when a newer release exists.
+- *Open phpMyAdmin* in the menu.
+
 ## [0.6.0] - 2026-11-20
 
 ### Added

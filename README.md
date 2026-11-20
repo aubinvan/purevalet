@@ -60,6 +60,7 @@ If `valet trust` is not set up, PureValet offers once to enable it instead of as
 | Password | Stop the password prompts | `valet trust` |
 | Files | Open Valet logs and configuration | `~/.config/valet` |
 | MariaDB | Start / stop Homebrew MariaDB (not registered at login) | `brew services run\|stop mariadb` |
+| phpMyAdmin | Install, update and open a built-in phpMyAdmin on `https://phpmyadmin.test` | official release + `valet link/isolate/secure` |
 
 PureValet also warns you if Yerd is installed, since it competes for ports 80/443, the `.test` DNS and port 3306.
 
@@ -102,6 +103,16 @@ Check the download against the `.sha256` file attached to the release:
 ```bash
 shasum -a 256 -c PureValet-x.y.z.dmg.sha256
 ```
+
+## phpMyAdmin
+
+**Settings → General → Database → phpMyAdmin → Install…** (or *Install phpMyAdmin…* in the menu):
+
+1. downloads the latest official release from phpmyadmin.net and checks its SHA-256;
+2. installs it in `~/Library/Application Support/PureValet/phpMyAdmin` with a config for the local MariaDB socket;
+3. serves it on `https://phpmyadmin.test`, isolated on a PHP version it supports (e.g. PHP 8.3 if your global PHP is 8.5).
+
+Log in with your **macOS user name and an empty password**: Homebrew's MariaDB recognises your account through its local socket (`unix_socket`), so no database password is stored anywhere. *Update to x.y.z* appears when a newer phpMyAdmin is released.
 
 ## Updates
 

@@ -79,6 +79,11 @@ final class ValetModel {
     var mariadbInstalled = false
     var mariadbRunning: Bool?
     var yerdDetected = false
+    /// Version of the phpMyAdmin copy managed by PureValet, nil if not installed.
+    var phpMyAdminVersion: String?
+    /// Latest phpMyAdmin release, fetched when the settings window opens.
+    var phpMyAdminLatest: PhpMyAdminRelease?
+
     /// Site name → true when it answers with a non-error HTTP status, false otherwise.
     var siteHealth: [String: Bool] = [:]
     var launchAtLogin = SMAppService.mainApp.status == .enabled
@@ -238,6 +243,7 @@ final class ValetModel {
         globalPHP = php.global
         mariadbInstalled = FileManager.default.fileExists(atPath: "\(Shell.brewPrefix)/opt/mariadb")
         trusted = FileManager.default.fileExists(atPath: "/etc/sudoers.d/valet")
+        phpMyAdminVersion = PhpMyAdmin.installedVersion
         launchAtLogin = SMAppService.mainApp.status == .enabled
 
         async let mariadb = mariadbInstalled ? Self.queryMariaDB() : nil
@@ -591,6 +597,63 @@ final class ValetModel {
         if mariadbInstalled, mariadbRunning == true {
             _ = await Shell.run(Self.brew, ["services", "stop", "mariadb"])
         }
+    }
+
+    // MARK: - phpMyAdmin
+
+    var phpMyAdminSite: ValetSite? { sites.first { $0.name == PhpMyAdmin.siteName } }
+    var phpMyAdminAvailable: Bool { phpMyAdminVersion != nil || phpMyAdminSite != nil }
+    var phpMyAdminUpdateAvailable: Bool {
+        guard let installed = phpMyAdminVersion, let latest = phpMyAdminLatest?.version else { return false }
+        return Updater.isVersion(latest, newerThan: installed)
+    }
+
+    func fetchPhpMyAdminLatest() async {
+        if let release = await PhpMyAdmin.fetchLatest() { phpMyAdminLatest = release }
+    }
+
+    func openPhpMyAdmin() {
+        let url = phpMyAdminSite.map(displayURL) ?? "https://\(PhpMyAdmin.siteName).\(tld)"
+        if let url = URL(string: url) { NSWorkspace.shared.open(url) }
+    }
+
+    /// Installs (or updates) the built-in phpMyAdmin and serves it as `phpmyadmin.<tld>` over HTTPS,
+    /// on a PHP version it supports.
+    func installPhpMyAdmin() async {
+        guard busyLabel == nil, case let .installed(binary) = install else { return }
+        let label = phpMyAdminVersion == nil ? String(localized: "Installing phpMyAdmin") : String(localized: "Updating phpMyAdmin")
+        await offerTrustIfNeeded(binary: binary)
+        busyLabel = label
+        var output: [String] = []
+        var result = CommandResult(status: 0, output: "")
+        do {
+            guard let release = await PhpMyAdmin.fetchLatest() else { throw PhpMyAdmin.InstallError.download }
+            phpMyAdminLatest = release
+            try await PhpMyAdmin.install(release)
+            output.append("phpMyAdmin \(release.version) → \(PhpMyAdmin.directory.path)")
+            var steps: [[String]] = [["link", PhpMyAdmin.siteName]]
+            if let php = PhpMyAdmin.compatiblePHP(constraint: release.phpConstraint, installed: phpFormulas, global: globalPHP) {
+                steps.append(["isolate", php, "--site=\(PhpMyAdmin.siteName)"])
+            }
+            if phpMyAdminSite?.secured != true {
+                steps.append(["secure", PhpMyAdmin.siteName])
+            }
+            for args in steps {
+                let step = await Shell.run(binary, args, cwd: PhpMyAdmin.directory, allowSudoPrompt: true)
+                output.append("$ valet \(args.joined(separator: " "))\n\(step.output)")
+                if !step.succeeded {
+                    result = CommandResult(status: step.status, output: output.joined(separator: "\n"))
+                    break
+                }
+            }
+            if result.succeeded { result = CommandResult(status: 0, output: output.joined(separator: "\n")) }
+        } catch {
+            result = CommandResult(status: 1, output: (output + [error.localizedDescription]).joined(separator: "\n"))
+        }
+        busyLabel = nil
+        report(label, result)
+        await refresh()
+        if result.succeeded { openPhpMyAdmin() }
     }
 
     func setLaunchAtLogin(_ enabled: Bool) {

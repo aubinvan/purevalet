@@ -101,6 +101,32 @@ final class ParsingTests: XCTestCase {
         XCTAssertFalse(ValetModel.isHealthy(statusCode: 503))
     }
 
+    func testParsesPhpMyAdminFeed() throws {
+        let json = """
+        {"version": "5.2.3", "releases": [
+          {"version": "5.2.3", "php_versions": ">=7.2,<8.4"},
+          {"version": "4.9.11", "php_versions": ">=5.5,<8.0"}]}
+        """
+        let release = try XCTUnwrap(PhpMyAdmin.parseRelease(Data(json.utf8)))
+        XCTAssertEqual(release, PhpMyAdminRelease(version: "5.2.3", phpConstraint: ">=7.2,<8.4"))
+    }
+
+    func testPicksCompatiblePHPForPhpMyAdmin() {
+        let installed = [PHPFormula(formula: "php", version: "8.5"), PHPFormula(formula: "php@8.4", version: "8.4"),
+                         PHPFormula(formula: "php@8.3", version: "8.3")]
+        XCTAssertEqual(PhpMyAdmin.compatiblePHP(constraint: ">=7.2,<8.4", installed: installed, global: "php"), "php@8.3")
+        XCTAssertNil(PhpMyAdmin.compatiblePHP(constraint: ">=7.2,<8.4", installed: installed, global: "php@8.3"))
+        XCTAssertNil(PhpMyAdmin.compatiblePHP(constraint: ">=8.1", installed: installed, global: "php"))
+        XCTAssertNil(PhpMyAdmin.compatiblePHP(constraint: nil, installed: installed, global: "php"))
+    }
+
+    func testPhpMyAdminConfigUsesSocketAndRandomSecret() {
+        let a = PhpMyAdmin.config(), b = PhpMyAdmin.config()
+        XCTAssertTrue(a.contains("'socket'] = '/tmp/mysql.sock'"))
+        XCTAssertTrue(a.contains("'auth_type'] = 'cookie'"))
+        XCTAssertNotEqual(a, b)
+    }
+
     func testSlug() {
         XCTAssertEqual(ValetModel.slug("Mon Projet_2"), "mon-projet-2")
     }

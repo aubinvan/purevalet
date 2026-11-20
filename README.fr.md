@@ -54,6 +54,7 @@ Si `valet trust` n’est pas activé, PureValet propose une seule fois de l’ac
 | Mot de passe | Supprimer les invites de mot de passe | `valet trust` |
 | Fichiers | Ouvrir les logs et la configuration de Valet | `~/.config/valet` |
 | MariaDB | Démarrer / arrêter MariaDB Homebrew (jamais enregistrée à la connexion) | `brew services run\|stop mariadb` |
+| phpMyAdmin | Installer, mettre à jour et ouvrir un phpMyAdmin intégré sur `https://phpmyadmin.test` | version officielle + `valet link/isolate/secure` |
 
 PureValet prévient aussi si Yerd est installé (mêmes ports 80/443, même DNS `.test`, même port 3306).
 
@@ -96,6 +97,16 @@ Vérifier le téléchargement avec le fichier `.sha256` joint à la version :
 ```bash
 shasum -a 256 -c PureValet-x.y.z.dmg.sha256
 ```
+
+## phpMyAdmin
+
+**Réglages → Général → Base de données → phpMyAdmin → Installer…** (ou *Installer phpMyAdmin…* dans le menu) :
+
+1. télécharge la dernière version officielle sur phpmyadmin.net et vérifie son empreinte SHA-256 ;
+2. l’installe dans `~/Library/Application Support/PureValet/phpMyAdmin` avec une configuration pour le socket local de MariaDB ;
+3. la sert sur `https://phpmyadmin.test`, isolée sur une version de PHP qu’elle prend en charge (par exemple PHP 8.3 si votre PHP global est 8.5).
+
+Connexion avec votre **nom d’utilisateur macOS et un mot de passe vide** : le MariaDB de Homebrew reconnaît votre compte via son socket local (`unix_socket`), aucun mot de passe de base de données n’est donc stocké. *Mettre à jour vers x.y.z* apparaît quand une nouvelle version de phpMyAdmin sort.
 
 ## Mises à jour
 

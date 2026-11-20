@@ -92,6 +92,11 @@ struct MenuContent: View {
             } else {
                 Button("Start MariaDB") { Task { await model.setMariaDB(true) } }
             }
+            if model.phpMyAdminAvailable {
+                Button("Open phpMyAdmin") { model.openPhpMyAdmin() }
+            } else if model.isInstalled {
+                Button("Install phpMyAdmin…") { Task { await model.installPhpMyAdmin() } }
+            }
         }
 
         if let message = model.lastMessage {

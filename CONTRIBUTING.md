@@ -32,6 +32,8 @@ This writes one PNG per settings tab (`general.png`, `sites.png`, `proxies.png`,
 | --- | --- |
 | `Sources/PureValet/App.swift` | Entry point, `MenuBarExtra` (menu style), `AppDelegate` (start at launch, stop at quit), `--snapshot` mode |
 | `Sources/PureValet/MenuContent.swift` | Native menu bar menu |
+| `Sources/PureValet/PhpMyAdmin.swift` | Built-in phpMyAdmin: release feed, download + SHA-256, config |
+| `Sources/PureValet/StatusDot.swift` | Green/red/grey dots for the menu |
 | `Sources/PureValet/Updater.swift` | Daily GitHub release check (no dependency) |
 | `Sources/PureValet/SettingsWindow.swift` | Settings window: sidebar + General / Sites / Proxies / About panes |
 | `Sources/PureValet/Shell.swift` | Runs commands with an explicit `PATH` and the `sudo` askpass helper |
