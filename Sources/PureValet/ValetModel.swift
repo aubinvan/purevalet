@@ -247,11 +247,16 @@ final class ValetModel {
             async let version = valetVersion == nil ? Shell.run(binary, ["--version"]) : nil
             let (s, l, pk, p, pa, v, ps) = await (status, links, parked, proxiesOut, paths, version, processes)
             running = s.succeeded || Self.valetServicesRunning(ps.output)
-            let linked = Self.parseSites(l.output)
-            let linkedNames = Set(linked.map(\.name))
-            sites = linked + Self.parseSites(pk.output, parked: true).filter { !linkedNames.contains($0.name) }
-            proxies = Self.parseProxies(p.output)
-            parkedPaths = Self.parsePaths(pa.output)
+            // A failed command (e.g. two `valet` runs racing) keeps the last known list instead of emptying it.
+            if l.succeeded && pk.succeeded {
+                let linked = Self.parseSites(l.output)
+                let linkedNames = Set(linked.map(\.name))
+                sites = linked + Self.parseSites(pk.output, parked: true).filter { !linkedNames.contains($0.name) }
+            }
+            if p.succeeded { proxies = Self.parseProxies(p.output) }
+            if pa.succeeded {
+                parkedPaths = Self.userParkedPaths(Self.parsePaths(pa.output), configDir: Self.valetConfigDir)
+            }
             if let v, v.succeeded { valetVersion = Self.parseValetVersion(v.output) }
         } else {
             install = .notInstalled
@@ -337,6 +342,13 @@ final class ValetModel {
         let phpFPM = lines.contains { $0.hasPrefix("php-fpm: pool valet") }
         let dnsmasq = lines.contains { $0.hasSuffix("/dnsmasq") || $0 == "dnsmasq" }
         return nginx && phpFPM && dnsmasq
+    }
+
+    /// Valet registers its own `Sites` folder (where linked sites live) as a parked path.
+    /// It is hidden so it cannot be "forgotten" by mistake, which would break every linked site.
+    nonisolated static func userParkedPaths(_ paths: [String], configDir: String) -> [String] {
+        let valetSites = URL(fileURLWithPath: configDir).appendingPathComponent("Sites").standardizedFileURL.path
+        return paths.filter { URL(fileURLWithPath: $0).standardizedFileURL.path != valetSites }
     }
 
     /// `valet paths` prints a JSON array of parked folders.

@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.5.3] - 2026-11-20
+
+### Fixed
+- Valet's internal `~/.config/valet/Sites` folder no longer appears in *Parked folders*: forgetting it by mistake would have broken every linked site.
+- A failed `valet` command during a refresh keeps the last known sites, proxies and parked folders instead of showing empty lists.
+
 ## [0.5.2] - 2026-11-20
 
 ### Fixed

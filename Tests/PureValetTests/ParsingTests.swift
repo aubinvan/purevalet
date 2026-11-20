@@ -88,6 +88,11 @@ final class ParsingTests: XCTestCase {
         XCTAssertFalse(ValetModel.valetServicesRunning(""))
     }
 
+    func testHidesValetInternalSitesFolder() {
+        let paths = ["/Users/a/.config/valet/Sites", "/Users/a/Sites"]
+        XCTAssertEqual(ValetModel.userParkedPaths(paths, configDir: "/Users/a/.config/valet"), ["/Users/a/Sites"])
+    }
+
     func testSlug() {
         XCTAssertEqual(ValetModel.slug("Mon Projet_2"), "mon-projet-2")
     }
