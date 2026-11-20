@@ -215,4 +215,51 @@ final class ParsingTests: XCTestCase {
     func testSlug() {
         XCTAssertEqual(ValetModel.slug("Mon Projet_2"), "mon-projet-2")
     }
+
+    // MARK: - PHP fallback (Homebrew replaced a version)
+
+    func testClosestVersionPrefersNextNewerThenNewestOlder() {
+        XCTAssertEqual(RootlessRuntime.closestVersion(to: "8.4", among: ["8.3", "8.4", "8.6"]), "8.4")
+        XCTAssertEqual(RootlessRuntime.closestVersion(to: "8.5", among: ["8.3", "8.4", "8.6"]), "8.6")
+        XCTAssertEqual(RootlessRuntime.closestVersion(to: "8.5", among: ["8.10", "8.6"]), "8.6", "numeric order, not text")
+        XCTAssertEqual(RootlessRuntime.closestVersion(to: "8.7", among: ["8.3", "8.4"]), "8.4")
+        XCTAssertNil(RootlessRuntime.closestVersion(to: "8.5", among: []))
+    }
+
+    func testPlanReplacesMissingGlobalAndIsolatedVersions() {
+        let formulas = [PHPFormula(formula: "php", version: "8.6"), PHPFormula(formula: "php@8.4", version: "8.4"),
+                        PHPFormula(formula: "php@8.3", version: "8.3")]
+        let plan = RootlessRuntime.plan(requestedGlobal: "8.5", linked: "8.6", isolated: ["8.3", "8.2"],
+                                        formulas: formulas, brewPrefix: "/opt/homebrew")
+        XCTAssertEqual(plan?.global, "8.6")
+        XCTAssertEqual(plan?.substitutions, ["8.5": "8.6", "8.2": "8.3"])
+        XCTAssertEqual(plan?.pools.map(\.version), ["8.3", "8.6"])
+        XCTAssertEqual(plan?.pools.last?.binary, "/opt/homebrew/opt/php/sbin/php-fpm")
+    }
+
+    func testPlanWithoutValetSocketUsesLinkedPHP() {
+        let formulas = [PHPFormula(formula: "php", version: "8.6"), PHPFormula(formula: "php@8.4", version: "8.4")]
+        let plan = RootlessRuntime.plan(requestedGlobal: nil, linked: "8.4", isolated: [], formulas: formulas)
+        XCTAssertEqual(plan?.global, "8.4")
+        XCTAssertEqual(plan?.substitutions, [:])
+        XCTAssertNil(RootlessRuntime.plan(requestedGlobal: "8.4", linked: nil, isolated: [], formulas: []))
+    }
+
+    func testIsolatedSiteCopyPointsAtReplacementSocket() {
+        let conf = "# ISOLATED_PHP_VERSION=php@8.2\nfastcgi_pass \"unix:/h/valet82.sock\";"
+        let replaced = ValetFiles.withSocket(conf, version: "php@8.3")
+        XCTAssertTrue(replaced.contains("valet83.sock"))
+        XCTAssertEqual(ValetFiles.isolatedVersion(replaced), "php@8.3")
+    }
+
+    // MARK: - E-mail capture
+
+    func testMailpitStaysLocal() {
+        let args = MailCapture.arguments(database: "/tmp/m.db")
+        XCTAssertEqual(args[args.firstIndex(of: "--listen")! + 1], "127.0.0.1:8025")
+        XCTAssertEqual(args[args.firstIndex(of: "--smtp")! + 1], "127.0.0.1:1025")
+        XCTAssertEqual(MailCapture.sendmailCommand(binary: "/opt/homebrew/opt/mailpit/bin/mailpit"),
+                       "/opt/homebrew/opt/mailpit/bin/mailpit sendmail -S 127.0.0.1:1025")
+        XCTAssertTrue(MailCapture.laravelEnv.contains("MAIL_PORT=1025"))
+    }
 }

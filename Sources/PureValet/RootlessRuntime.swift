@@ -22,7 +22,7 @@ final class RootlessRuntime {
     let dir: URL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         .appendingPathComponent("PureValet/runtime", isDirectory: true)
     private var children: [String: Process] = [:]
-    private var runningPools: [Pool] = []
+    private var runningPlan: Plan?
 
     private func path(_ name: String) -> String { dir.appendingPathComponent(name).path }
 
@@ -41,13 +41,54 @@ final class RootlessRuntime {
 
     private func alive(_ pid: pid_t) -> Bool { kill(pid, 0) == 0 }
 
-    /// PHP-FPM pools needed: the global version plus every version a site is isolated on.
-    func pools(files: ValetFiles, globalVersion: String, formulas: [PHPFormula]) -> [Pool] {
-        let versions = Set([globalVersion]).union(files.isolatedVersions()).sorted()
-        return versions.compactMap { version in
-            guard let formula = formulas.first(where: { $0.version == version }) else { return nil }
-            return Pool(version: version, binary: "\(Shell.brewPrefix)/opt/\(formula.formula)/sbin/php-fpm")
+    /// What to run: the PHP-FPM pools, the global version and the PHP versions replaced because their
+    /// Homebrew formula is gone (e.g. `brew upgrade` turned `php` 8.5 into 8.6).
+    struct Plan: Equatable {
+        var global: String
+        var pools: [Pool]
+        /// Version asked for (by `valet.sock` or an isolated site) → installed version used instead.
+        var substitutions: [String: String] = [:]
+        /// `sendmail_path` given to PHP, so `mail()` goes to the mail capture (nil: PHP's default).
+        var sendmail: String?
+    }
+
+    /// The installed version to use for `wanted`: itself, else the closest newer one (a project made for
+    /// 8.5 usually runs on 8.6, and Composer refuses older ones), else the newest older one.
+    nonisolated static func closestVersion(to wanted: String, among installed: [String]) -> String? {
+        if installed.contains(wanted) { return wanted }
+        let sorted = Set(installed).filter { !$0.isEmpty }.sorted { $0.compare($1, options: .numeric) == .orderedAscending }
+        return sorted.first { $0.compare(wanted, options: .numeric) == .orderedDescending } ?? sorted.last
+    }
+
+    /// PHP-FPM pools needed: the global version plus every version a site is isolated on, each one
+    /// replaced by the closest installed version when its formula is gone. Pure, so it can be tested.
+    /// - Parameters:
+    ///   - requestedGlobal: version `valet.sock` points to (nil: none yet).
+    ///   - linked: version of the formula Homebrew links as `php`, used when nothing is requested.
+    nonisolated static func plan(requestedGlobal: String?, linked: String?, isolated: Set<String>,
+                                 formulas: [PHPFormula], brewPrefix: String = Shell.brewPrefix,
+                                 sendmail: String? = nil) -> Plan? {
+        let installed = formulas.map(\.version)
+        guard let wanted = requestedGlobal ?? linked ?? installed.first,
+              let global = closestVersion(to: wanted, among: installed) else { return nil }
+        var substitutions: [String: String] = [:]
+        if wanted != global { substitutions[wanted] = global }
+        var versions: Set<String> = [global]
+        for version in isolated {
+            guard let used = closestVersion(to: version, among: installed) else { continue }
+            if used != version { substitutions[version] = used }
+            versions.insert(used)
         }
+        let pools = versions.sorted().compactMap { version -> Pool? in
+            guard let formula = formulas.first(where: { $0.version == version }) else { return nil }
+            return Pool(version: version, binary: "\(brewPrefix)/opt/\(formula.formula)/sbin/php-fpm")
+        }
+        return Plan(global: global, pools: pools, substitutions: substitutions, sendmail: sendmail)
+    }
+
+    func plan(files: ValetFiles, requestedGlobal: String?, linked: String?, formulas: [PHPFormula]) -> Plan? {
+        Self.plan(requestedGlobal: requestedGlobal, linked: linked, isolated: files.isolatedVersions(),
+                  formulas: formulas, sendmail: MailCapture.sendmailPath)
     }
 
     // MARK: - Config generation
@@ -60,7 +101,7 @@ final class RootlessRuntime {
         return text
     }
 
-    func generate(files: ValetFiles, pools: [Pool], globalVersion: String) throws {
+    func generate(files: ValetFiles, plan: Plan) throws {
         let fm = FileManager.default
         let sites = dir.appendingPathComponent("sites")
         try? fm.removeItem(at: sites)
@@ -74,7 +115,13 @@ final class RootlessRuntime {
             try fm.copyItem(atPath: "\(Shell.brewPrefix)/etc/nginx/\(name)", toPath: target)
         }
         for file in (try? fm.contentsOfDirectory(atPath: files.nginxDir)) ?? [] where !file.hasPrefix(".") {
-            guard let conf = try? String(contentsOfFile: "\(files.nginxDir)/\(file)", encoding: .utf8) else { continue }
+            guard var conf = try? String(contentsOfFile: "\(files.nginxDir)/\(file)", encoding: .utf8) else { continue }
+            // A site isolated on a PHP that is gone uses the replacement version (in this copy only:
+            // Valet's own file keeps the version the user chose).
+            if let isolated = ValetFiles.isolatedVersion(conf)?.replacingOccurrences(of: "php@", with: ""),
+               let used = plan.substitutions[isolated] {
+                conf = ValetFiles.withSocket(conf, version: "php@\(used)")
+            }
             try Self.rootless(conf, errorLog: errorLog)
                 .write(to: sites.appendingPathComponent("\(file).conf"), atomically: true, encoding: .utf8)
         }
@@ -114,7 +161,8 @@ final class RootlessRuntime {
         """
         try nginx.write(toFile: path("nginx.conf"), atomically: true, encoding: .utf8)
 
-        for pool in pools {
+        for pool in plan.pools {
+            let mail = plan.sendmail.map { "php_admin_value[sendmail_path] = \($0)\n" } ?? ""
             let fpm = """
             [global]
             pid = \(path("php-\(pool.version).pid"))
@@ -131,7 +179,7 @@ final class RootlessRuntime {
             pm.max_spare_servers = 2
             env['LC_ALL'] = C
             env['PGGSSENCMODE'] = disable
-
+            \(mail)
             """
             try fpm.write(toFile: path("php-\(pool.version).conf"), atomically: true, encoding: .utf8)
         }
@@ -150,22 +198,24 @@ final class RootlessRuntime {
         try dns.write(toFile: path("dnsmasq.conf"), atomically: true, encoding: .utf8)
 
         // `valet.sock` (used by non-isolated sites) points at the global version's pool.
+        // If the global PHP was replaced, this also repairs the link for the `valet` CLI.
         let link = "\(files.home)/valet.sock"
-        if (try? fm.destinationOfSymbolicLink(atPath: link)) != "\(files.home)/\(ValetFiles.socketName(globalVersion))" {
+        let target = "\(files.home)/\(ValetFiles.socketName(plan.global))"
+        if (try? fm.destinationOfSymbolicLink(atPath: link)) != target {
             try? fm.removeItem(atPath: link)
-            try fm.createSymbolicLink(atPath: link, withDestinationPath: "\(files.home)/\(ValetFiles.socketName(globalVersion))")
+            try fm.createSymbolicLink(atPath: link, withDestinationPath: target)
         }
     }
 
     // MARK: - Processes
 
-    func start(files: ValetFiles, globalVersion: String, formulas: [PHPFormula]) async throws {
+    func start(files: ValetFiles, plan: Plan) async throws {
         await stop()
         let fm = FileManager.default
         try fm.createDirectory(at: dir, withIntermediateDirectories: true)
-        let pools = pools(files: files, globalVersion: globalVersion, formulas: formulas)
+        let pools = plan.pools
         guard !pools.isEmpty else { throw RootlessError.start(String(localized: "No Homebrew PHP found for the global version.")) }
-        try generate(files: files, pools: pools, globalVersion: globalVersion)
+        try generate(files: files, plan: plan)
 
         for pool in pools {
             try? fm.removeItem(atPath: "\(files.home)/\(pool.socket)")
@@ -173,7 +223,7 @@ final class RootlessRuntime {
         }
         try spawn("nginx", "\(Shell.brewPrefix)/opt/nginx/bin/nginx", ["-c", path("nginx.conf"), "-g", "daemon off;"])
         try spawn("dnsmasq", "\(Shell.brewPrefix)/opt/dnsmasq/sbin/dnsmasq", ["-k", "-C", path("dnsmasq.conf")])
-        runningPools = pools
+        runningPlan = plan
 
         for _ in 0..<40 {
             if let failed = children.first(where: { !$0.value.isRunning }) {
@@ -189,15 +239,15 @@ final class RootlessRuntime {
         throw RootlessError.start(String(localized: "The services did not start in time."))
     }
 
-    /// Applies site changes: regenerates the configs, restarts PHP pools if the set changed, reloads nginx.
-    func reload(files: ValetFiles, globalVersion: String, formulas: [PHPFormula]) async throws {
+    /// Applies site changes: regenerates the configs, restarts PHP pools if they changed, reloads nginx.
+    func reload(files: ValetFiles, plan: Plan) async throws {
         guard isRunning else { return }
-        let pools = pools(files: files, globalVersion: globalVersion, formulas: formulas)
-        if pools != runningPools {
-            try await start(files: files, globalVersion: globalVersion, formulas: formulas)
+        if plan.pools != runningPlan?.pools || plan.sendmail != runningPlan?.sendmail {
+            try await start(files: files, plan: plan)
             return
         }
-        try generate(files: files, pools: pools, globalVersion: globalVersion)
+        try generate(files: files, plan: plan)
+        runningPlan = plan
         if let nginx = pid("nginx.pid") { kill(nginx, SIGHUP) }
     }
 
@@ -213,7 +263,7 @@ final class RootlessRuntime {
         }
         for pid in pids where alive(pid) { kill(pid, SIGKILL) }
         children = [:]
-        runningPools = []
+        runningPlan = nil
         for file in (try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? [] where file.hasSuffix(".pid") {
             try? FileManager.default.removeItem(atPath: path(file))
         }

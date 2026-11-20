@@ -194,6 +194,15 @@ struct GeneralPane: View {
                     }
                     Text("Same as `valet use`. An isolated site keeps its own version (Sites tab).")
                         .settingsCaption()
+                    if let notice = model.phpNotice {
+                        Label {
+                            Text(verbatim: notice)
+                        } icon: {
+                            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                        }
+                        Text("Homebrew replaced or removed this PHP version (for example during `brew upgrade`). PureValet automatically uses the closest installed version (the next newer one if possible) so the sites keep working. Pick a global version above, or isolate the site again, to choose yourself.")
+                            .settingsCaption()
+                    }
                 } header: {
                     Text("PHP")
                 }
@@ -240,13 +249,68 @@ struct GeneralPane: View {
             }
 
             Section {
+                if model.redisInstalled {
+                    HStack {
+                        Label("Redis (Homebrew)", systemImage: "memorychip")
+                        Spacer()
+                        Text(serviceState(model.redisRunning)).foregroundStyle(.secondary)
+                        if model.redisRunning == true {
+                            Button("Stop") { Task { await model.setRedis(false) } }
+                        } else {
+                            Button("Start") { Task { await model.setRedis(true) } }
+                        }
+                    }
+                    Text("Listens on 127.0.0.1:6379 (Homebrew's configuration). Laravel: `REDIS_HOST=127.0.0.1`, `REDIS_PORT=6379`.")
+                        .settingsCaption()
+                } else {
+                    InstallHintRow(name: "Redis", systemImage: "memorychip", command: "brew install redis")
+                }
+            } header: {
+                Text("Cache")
+            }
+
+            Section {
+                if model.mailpitInstalled {
+                    HStack {
+                        Label("Mailpit", systemImage: "envelope")
+                        Spacer()
+                        Text(serviceState(model.mailpitRunning)).foregroundStyle(.secondary)
+                        if model.mailpitRunning {
+                            Button("Stop") { Task { await model.setMailCapture(false) } }
+                            Button("Open") { model.openMailbox() }
+                                .buttonStyle(.borderedProminent)
+                        } else {
+                            Button("Start") { Task { await model.setMailCapture(true) } }
+                        }
+                    }
+                    Text("Every e-mail your sites send lands in a local inbox (http://127.0.0.1:\(String(MailCapture.webPort))) instead of reaching real people. PHP's `mail()` (WordPress's default) is routed there in the no-admin mode; for Laravel, use the SMTP settings below.")
+                        .settingsCaption()
+                    HStack(alignment: .top) {
+                        Text(verbatim: MailCapture.laravelEnv)
+                            .font(.system(.callout, design: .monospaced))
+                            .textSelection(.enabled)
+                        Spacer()
+                        Button {
+                            model.copyMailEnv()
+                        } label: {
+                            Label("Copy", systemImage: "doc.on.doc")
+                        }
+                    }
+                } else {
+                    InstallHintRow(name: "Mailpit", systemImage: "envelope", command: "brew install mailpit")
+                }
+            } header: {
+                Text("E-mail capture")
+            }
+
+            Section {
                 Toggle(isOn: $startOnLaunch) {
                     Label("Start services when PureValet opens", systemImage: "play.circle")
                 }
                 Toggle(isOn: $stopOnQuit) {
                     Label("Stop all services when quitting", systemImage: "stop.circle")
                 }
-                Text("Services are Valet (nginx, PHP-FPM, dnsmasq) and Homebrew MariaDB. When PureValet quits, they are stopped and unregistered, so nothing keeps running or restarts at boot. Enable password-free commands to quit without a password prompt.")
+                Text("Services are Valet (nginx, PHP-FPM, dnsmasq), and MariaDB, Redis and Mailpit when installed. When PureValet quits, they are stopped and unregistered, so nothing keeps running or restarts at boot. Enable password-free commands to quit without a password prompt.")
                     .settingsCaption()
                 Toggle(isOn: Binding(
                     get: { model.launchAtLogin },
@@ -261,12 +325,43 @@ struct GeneralPane: View {
         .formStyle(.grouped)
     }
 
-    private var mariadbState: String {
-        switch model.mariadbRunning {
+    private var mariadbState: String { serviceState(model.mariadbRunning) }
+
+    private func serviceState(_ running: Bool?) -> String {
+        switch running {
         case .some(true): return String(localized: "Running")
         case .some(false): return String(localized: "Stopped")
         case .none: return "…"
         }
+    }
+}
+
+/// A Homebrew service that is not installed: PureValet never installs anything, it shows the command.
+struct InstallHintRow: View {
+    let name: String
+    let systemImage: String
+    let command: String
+
+    var body: some View {
+        HStack {
+            Label(name, systemImage: systemImage)
+            Spacer()
+            Text("Not installed").foregroundStyle(.secondary)
+        }
+        HStack {
+            Text(verbatim: command)
+                .font(.system(.callout, design: .monospaced))
+                .textSelection(.enabled)
+            Spacer()
+            Button {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(command, forType: .string)
+            } label: {
+                Label("Copy", systemImage: "doc.on.doc")
+            }
+        }
+        Text("Run this command in Terminal, then reopen this window. PureValet never installs anything itself.")
+            .settingsCaption()
     }
 }
 
@@ -335,7 +430,7 @@ struct PhpMyAdminRow: View {
             }
         }
         .task { await model.fetchPhpMyAdminLatest() }
-        Text("Log in with your macOS user name (\(NSUserName())) and an empty password: MariaDB recognises your account through its local socket, so no password is stored. PureValet installs the official release (SHA-256 checked) in its Application Support folder and serves it on `phpmyadmin.\(model.tld)`.")
+        Text("Log in with `\(PhpMyAdmin.defaultUser)` / `\(PhpMyAdmin.defaultPassword)`: PureValet creates this MariaDB account (with every right), accepted only from this Mac. Your macOS user name (\(NSUserName())) with an empty password still works. PureValet installs the official release (SHA-256 checked) in its Application Support folder and serves it on `phpmyadmin.\(model.tld)`.")
             .settingsCaption()
     }
 }

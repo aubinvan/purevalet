@@ -20,7 +20,16 @@ struct MenuContent: View {
             Divider()
         }
 
-        if model.isInstalled || model.mariadbInstalled {
+        if let notice = model.phpNotice {
+            Button {
+                SettingsWindowController.shared.show(model: model, tab: .general)
+            } label: {
+                Label(notice, systemImage: "exclamationmark.triangle")
+            }
+            Divider()
+        }
+
+        if model.isInstalled || model.mariadbInstalled || model.redisInstalled || model.mailpitInstalled {
             if model.anyServiceStopped {
                 Button("Start All Services") { Task { await model.startAll() } }
             }
@@ -101,6 +110,25 @@ struct MenuContent: View {
                 Button("Open phpMyAdmin") { model.openPhpMyAdmin() }
             } else if model.isInstalled {
                 Button("Install phpMyAdmin…") { Task { await model.installPhpMyAdmin() } }
+            }
+        }
+
+        if model.redisInstalled || model.mailpitInstalled {
+            Divider()
+            if model.redisInstalled {
+                if model.redisRunning == true {
+                    Button("Stop Redis") { Task { await model.setRedis(false) } }
+                } else {
+                    Button("Start Redis") { Task { await model.setRedis(true) } }
+                }
+            }
+            if model.mailpitInstalled {
+                if model.mailpitRunning {
+                    Button("Open Captured E-mails") { model.openMailbox() }
+                    Button("Stop E-mail Capture") { Task { await model.setMailCapture(false) } }
+                } else {
+                    Button("Start E-mail Capture") { Task { await model.setMailCapture(true) } }
+                }
             }
         }
 
