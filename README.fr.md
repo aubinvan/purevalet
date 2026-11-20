@@ -173,6 +173,14 @@ Structure du code, traductions et publication : [CONTRIBUTING.md](CONTRIBUTING.m
 - Testée sur Apple Silicon ; la version Intel n’est pas testée.
 - `valet share` et Expose ne sont pas gérés.
 
+## Contribuer
+
+Les contributions sont bienvenues : signalements de bugs, idées, traductions, documentation et code.
+
+- Lisez [CONTRIBUTING.md](CONTRIBUTING.md) (installation, méthode de travail, principes) et le [Code de conduite](CODE_OF_CONDUCT.md).
+- Questions et idées : [Discussions](https://github.com/aubinvan/purevalet/discussions). Bugs : [issues](https://github.com/aubinvan/purevalet/issues/new/choose). Sécurité : [SECURITY.md](SECURITY.md).
+- Les bons points de départ portent l’étiquette [`good first issue`](https://github.com/aubinvan/purevalet/labels/good%20first%20issue).
+
 ## Licence
 
 [MIT](LICENSE) : utiliser, copier, modifier, vendre, redistribuer, tout est permis. Seule condition : garder la mention de copyright.

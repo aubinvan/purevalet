@@ -1,0 +1,33 @@
+name: Feature request
+description: Suggest an improvement or a new feature.
+labels: ["enhancement", "needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        PureValet stays deliberately small: no background process, no dependency, nothing installed without the user. Requests that keep it light are the most likely to be accepted.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the situation, not only the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What should PureValet do? Which Valet or Homebrew command would it run?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - label: This works without adding a background process, timer or dependency.
+        - label: I would like to implement it myself.

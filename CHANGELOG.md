@@ -3,6 +3,17 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- Contribution guidelines, code of conduct, security policy, support guide, issue and pull request templates, CODEOWNERS, EditorConfig.
+- Release workflow: pushing a `vX.Y.Z` tag builds the DMG on GitHub and publishes the release with its changelog section.
+- Dependabot keeps the CI actions up to date.
+
+### Changed
+- CI builds with warnings as errors, checks shell scripts, and cancels outdated runs.
+- `scripts/update-cask.sh` uses the published SHA-256 of the release instead of a local build.
+
 ## [0.7.1] - 2026-11-20
 
 ### Added

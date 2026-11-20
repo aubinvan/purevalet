@@ -186,6 +186,14 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the code layout, translations and the
 - Tested on Apple Silicon; the Intel build is untested.
 - `valet share` and Expose are not supported.
 
+## Contributing
+
+Contributions are welcome: bug reports, ideas, translations, docs and code.
+
+- Read [CONTRIBUTING.md](CONTRIBUTING.md) (setup, workflow, principles) and the [Code of Conduct](CODE_OF_CONDUCT.md).
+- Questions and ideas: [Discussions](https://github.com/aubinvan/purevalet/discussions). Bugs: [issues](https://github.com/aubinvan/purevalet/issues/new/choose). Security: [SECURITY.md](SECURITY.md).
+- Good starting points are labelled [`good first issue`](https://github.com/aubinvan/purevalet/labels/good%20first%20issue).
+
 ## License
 
 [MIT](LICENSE): use, copy, modify, sell, redistribute, anything. Just keep the copyright notice.

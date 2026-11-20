@@ -1,21 +1,20 @@
 #!/bin/sh
 # Publishes the Homebrew cask for the current VERSION to github.com/aubinvan/homebrew-tap.
-# Run after the GitHub release is published (needs build/PureValet-<version>.dmg.sha256 and `gh` auth).
+# Run after the GitHub release is published (needs `gh` auth with write access to the tap).
 # Usage: ./scripts/update-cask.sh
 set -eu
 cd "$(dirname "$0")/.."
 
 VERSION="$(cat VERSION)"
-SHA_FILE="build/PureValet-${VERSION}.dmg.sha256"
 TAP="aubinvan/homebrew-tap"
 CASK_PATH="Casks/purevalet.rb"
+BASE="https://github.com/aubinvan/purevalet/releases/download/v${VERSION}/PureValet-${VERSION}.dmg"
 
-[ -f "$SHA_FILE" ] || { echo "Missing $SHA_FILE: run ./scripts/make-dmg.sh first." >&2; exit 1; }
-SHA256="$(cut -d' ' -f1 "$SHA_FILE")"
-
-# Make sure the published asset matches the local checksum.
-REMOTE_SHA="$(curl -fsSL "https://github.com/aubinvan/purevalet/releases/download/v${VERSION}/PureValet-${VERSION}.dmg" | shasum -a 256 | cut -d' ' -f1)"
-[ "$REMOTE_SHA" = "$SHA256" ] || { echo "Published DMG checksum differs from $SHA_FILE." >&2; exit 1; }
+# Use the published checksum, and check that the published DMG really matches it.
+SHA256="$(curl -fsSL "${BASE}.sha256" | cut -d' ' -f1)"
+[ "${#SHA256}" = 64 ] || { echo "No published SHA-256 for ${VERSION} (is the release out?)." >&2; exit 1; }
+REMOTE_SHA="$(curl -fsSL "$BASE" | shasum -a 256 | cut -d' ' -f1)"
+[ "$REMOTE_SHA" = "$SHA256" ] || { echo "Published DMG does not match its published SHA-256." >&2; exit 1; }
 
 CASK="$(mktemp)"
 trap 'rm -f "$CASK"' EXIT

@@ -1,0 +1,68 @@
+name: Bug report
+description: Something does not work as expected.
+labels: ["bug", "needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to report a bug. English or French is fine.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the menu
+        2. Click "Start Valet"
+        3. …
+    validations:
+      required: true
+  - type: input
+    id: purevalet
+    attributes:
+      label: PureValet version
+      description: Settings → About → Versions.
+      placeholder: "0.7.1"
+    validations:
+      required: true
+  - type: input
+    id: valet
+    attributes:
+      label: Laravel Valet version
+      description: Output of `valet --version`.
+      placeholder: "4.13.0"
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version and Mac
+      placeholder: "macOS 15.4, MacBook Pro M4"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install PureValet?
+      options:
+        - Homebrew cask
+        - DMG from GitHub Releases
+        - Built from source
+  - type: textarea
+    id: details
+    attributes:
+      label: Command output
+      description: In the settings window, click **Details** in the bottom bar after the failing action and paste the output here. Remove anything private.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+        - label: I am using the latest PureValet release.
+          required: true
