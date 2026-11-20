@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-20
+
 ### Added
 - **Dark and tinted app icon**: on macOS 26+, the icon follows the system icon appearance (graphite tile in dark mode, tinted mode supported), built from an Icon Composer file (`Resources/AppIcon.icon`). macOS 14–15 keep the light icon.
 - The README logo follows GitHub's light/dark theme.
