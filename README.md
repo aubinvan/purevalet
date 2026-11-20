@@ -42,7 +42,7 @@ Inspired by [Hex](https://hex.audio): a plain native menu for everyday actions, 
   - *Proxies*: list, add, remove.
   - *About*: versions of PureValet, Valet, PHP, nginx, dnsmasq, Composer and MariaDB; update check.
 
-The menu bar logo is dimmed while Valet is stopped. In the menu, a **green dot** means Valet runs and a **red dot** means it is stopped; each site also gets a dot (green: it answers, red: server error or no answer).
+The menu bar logo is dimmed while Valet is stopped. If you cannot see it (a crowded menu bar hides icons behind the notch), open PureValet again from Spotlight or Launchpad: the settings window appears. In the menu, a **green dot** means Valet runs and a **red dot** means it is stopped; each site also gets a dot (green: it answers, red: server error or no answer).
 
 If `valet trust` is not set up, PureValet offers once to enable it instead of asking for your password on every action.
 

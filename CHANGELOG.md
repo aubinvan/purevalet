@@ -3,6 +3,16 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.7.1] - 2026-11-20
+
+### Added
+- Opening PureValet again (Spotlight, Launchpad, Finder) while it runs shows the settings window, a way in when the menu bar icon is hidden behind the notch of a crowded menu bar.
+- The settings window opens by itself on first launch.
+- `PureValet --install-phpmyadmin` runs the built-in phpMyAdmin installer headlessly (testing, scripts).
+
+### Fixed
+- The settings window is forced to the front when opened from the menu bar.
+
 ## [0.7.0] - 2026-11-20
 
 ### Added

@@ -10,6 +10,18 @@ struct PureValetApp: App {
         Preferences.register()
         // `PureValet --snapshot <folder>`: captures the settings window (one PNG per tab), then quits.
         let args = CommandLine.arguments
+        // `PureValet --install-phpmyadmin`: runs the built-in phpMyAdmin installer headlessly, prints the result, quits.
+        if args.contains("--install-phpmyadmin") {
+            Snapshot.isActive = true
+            Task { @MainActor in
+                let model = ValetModel()
+                await model.refresh()
+                await model.installPhpMyAdmin(openWhenDone: false)
+                print(model.lastMessage ?? "no result")
+                print(model.lastOutput)
+                exit(model.lastFailed ? 1 : 0)
+            }
+        }
         if let i = args.firstIndex(of: "--snapshot"), i + 1 < args.count {
             Snapshot.isActive = true
             Snapshot.render(into: URL(fileURLWithPath: args[i + 1]))
@@ -36,11 +48,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard !Snapshot.isActive else { return }
         Task { await Updater.shared.checkIfDue() }
+        // First launch: show the window, so the app is visible even if its menu bar icon is hidden
+        // (e.g. behind the notch of a crowded menu bar).
+        if !UserDefaults.standard.bool(forKey: "didShowSettingsOnce") {
+            UserDefaults.standard.set(true, forKey: "didShowSettingsOnce")
+            SettingsWindowController.shared.show(model: ValetModel.shared)
+        }
         guard Preferences.startOnLaunch else { return }
         Task {
             await ValetModel.shared.refresh()
             await ValetModel.shared.startAll()
         }
+    }
+
+    /// Opening PureValet again (Spotlight, Launchpad, Finder) while it runs shows the settings window:
+    /// a way in when the menu bar icon is hidden.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        SettingsWindowController.shared.show(model: ValetModel.shared)
+        return true
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {

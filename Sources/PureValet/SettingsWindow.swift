@@ -36,16 +36,21 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     func show(model: ValetModel, tab: SettingsTab? = nil) {
         if let tab { selection.tab = tab }
         if let window {
-            window.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
+            bringToFront(window)
             return
         }
         let window = Self.makeWindow(model: model, selection: selection)
         window.delegate = self
         window.center()
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        bringToFront(window)
         self.window = window
+    }
+
+    /// Menu bar (accessory) apps are not always activated by a plain `makeKeyAndOrderFront`.
+    private func bringToFront(_ window: NSWindow) {
+        NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
+        window.orderFrontRegardless()
     }
 
     static func makeWindow(model: ValetModel, selection: TabSelection) -> NSWindow {

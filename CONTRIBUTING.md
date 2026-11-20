@@ -24,6 +24,8 @@ Quick visual check without clicking the menu bar:
 "build/PureValet.app/Contents/MacOS/PureValet" --snapshot /tmp/valet-snap
 ```
 
+`--install-phpmyadmin` runs the built-in phpMyAdmin installer without the UI and prints the result.
+
 This writes one PNG per settings tab (`general.png`, `sites.png`, `proxies.png`, `about.png`). The menu bar menu itself cannot be captured this way.
 
 ## Code layout

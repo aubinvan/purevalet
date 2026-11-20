@@ -619,7 +619,7 @@ final class ValetModel {
 
     /// Installs (or updates) the built-in phpMyAdmin and serves it as `phpmyadmin.<tld>` over HTTPS,
     /// on a PHP version it supports.
-    func installPhpMyAdmin() async {
+    func installPhpMyAdmin(openWhenDone: Bool = true) async {
         guard busyLabel == nil, case let .installed(binary) = install else { return }
         let label = phpMyAdminVersion == nil ? String(localized: "Installing phpMyAdmin") : String(localized: "Updating phpMyAdmin")
         await offerTrustIfNeeded(binary: binary)
@@ -653,7 +653,7 @@ final class ValetModel {
         busyLabel = nil
         report(label, result)
         await refresh()
-        if result.succeeded { openPhpMyAdmin() }
+        if result.succeeded && openWhenDone { openPhpMyAdmin() }
     }
 
     func setLaunchAtLogin(_ enabled: Bool) {

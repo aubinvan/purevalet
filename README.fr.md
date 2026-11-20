@@ -36,7 +36,7 @@ Inspirée de [Hex](https://hex.audio) : un menu natif simple pour les actions co
   - *Proxys* : liste, ajout, suppression.
   - *À propos* : versions de PureValet, Valet, PHP, nginx, dnsmasq, Composer et MariaDB ; mises à jour.
 
-Le logo de la barre de menus est atténué quand Valet est arrêté. Dans le menu, une **pastille verte** indique que Valet tourne et une **pastille rouge** qu’il est arrêté ; chaque site a aussi sa pastille (verte : il répond, rouge : erreur serveur ou pas de réponse).
+Le logo de la barre de menus est atténué quand Valet est arrêté. Si vous ne le voyez pas (une barre de menus chargée cache des icônes derrière l’encoche), rouvrez PureValet depuis Spotlight ou le Launchpad : la fenêtre de réglages s’affiche. Dans le menu, une **pastille verte** indique que Valet tourne et une **pastille rouge** qu’il est arrêté ; chaque site a aussi sa pastille (verte : il répond, rouge : erreur serveur ou pas de réponse).
 
 Si `valet trust` n’est pas activé, PureValet propose une seule fois de l’activer au lieu de demander votre mot de passe à chaque action.
 
