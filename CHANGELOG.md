@@ -3,6 +3,11 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.5.1] - 2026-11-20
+
+### Fixed
+- Valet showed as "stopped" while running when `valet trust` was not set up: since Valet 4.13, `valet status` needs `sudo`. PureValet now also checks that nginx, PHP-FPM (`valet` pool) and dnsmasq are running.
+
 ## [0.5.0] - 2026-11-20
 
 ### Added

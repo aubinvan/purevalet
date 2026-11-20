@@ -75,6 +75,19 @@ final class ParsingTests: XCTestCase {
         XCTAssertNil(Updater.parseRelease(Data("{}".utf8)))
     }
 
+    func testDetectsValetServicesFromProcessList() {
+        let running = """
+        /opt/homebrew/opt/dnsmasq/sbin/dnsmasq
+        nginx: master process /opt/homebrew/opt/nginx/bin/nginx -g daemon off;
+        nginx: worker process
+        php-fpm: master process (/opt/homebrew/etc/php/8.5/php-fpm.conf)
+        php-fpm: pool valet
+        """
+        XCTAssertTrue(ValetModel.valetServicesRunning(running))
+        XCTAssertFalse(ValetModel.valetServicesRunning("/opt/homebrew/opt/dnsmasq/sbin/dnsmasq\nphp-fpm: pool www"))
+        XCTAssertFalse(ValetModel.valetServicesRunning(""))
+    }
+
     func testSlug() {
         XCTAssertEqual(ValetModel.slug("Mon Projet_2"), "mon-projet-2")
     }

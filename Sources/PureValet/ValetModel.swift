@@ -232,14 +232,17 @@ final class ValetModel {
             install = .installed(binary: binary)
             tld = Self.readTLD()
             async let status = Shell.run(binary, ["status"])
+            // `valet status` needs sudo in Valet 4.13+: without `valet trust` it fails even when
+            // Valet runs. The process list is checked too, so the state is right either way.
+            async let processes = Shell.run("/bin/ps", ["-axo", "comm="])
             async let links = Shell.run(binary, ["links"])
             async let parked = Shell.run(binary, ["parked"])
             async let proxiesOut = Shell.run(binary, ["proxies"])
             async let paths = Shell.run(binary, ["paths"])
             // The Valet version never changes while the app runs: ask once.
             async let version = valetVersion == nil ? Shell.run(binary, ["--version"]) : nil
-            let (s, l, pk, p, pa, v) = await (status, links, parked, proxiesOut, paths, version)
-            running = s.succeeded
+            let (s, l, pk, p, pa, v, ps) = await (status, links, parked, proxiesOut, paths, version, processes)
+            running = s.succeeded || Self.valetServicesRunning(ps.output)
             let linked = Self.parseSites(l.output)
             let linkedNames = Set(linked.map(\.name))
             sites = linked + Self.parseSites(pk.output, parked: true).filter { !linkedNames.contains($0.name) }
@@ -321,6 +324,15 @@ final class ValetModel {
             guard let name = row["site"], !name.isEmpty else { return nil }
             return ValetProxy(name: name, secured: isSecure(row["ssl"]), url: row["url"] ?? "", host: row["host"] ?? "")
         }
+    }
+
+    /// True when Valet's three services appear in `ps -axo comm=`: nginx, PHP-FPM's `valet` pool and dnsmasq.
+    nonisolated static func valetServicesRunning(_ psOutput: String) -> Bool {
+        let lines = psOutput.split(separator: "\n")
+        let nginx = lines.contains { $0.hasPrefix("nginx: master process") }
+        let phpFPM = lines.contains { $0.hasPrefix("php-fpm: pool valet") }
+        let dnsmasq = lines.contains { $0.hasSuffix("/dnsmasq") || $0 == "dnsmasq" }
+        return nginx && phpFPM && dnsmasq
     }
 
     /// `valet paths` prints a JSON array of parked folders.
