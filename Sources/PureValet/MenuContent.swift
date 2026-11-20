@@ -74,7 +74,7 @@ struct MenuContent: View {
 
         Divider()
 
-        Button("Quitter Valet Desktop") { NSApp.terminate(nil) }
+        Button("Quitter PureValet") { NSApp.terminate(nil) }
             .keyboardShortcut("q")
     }
 }

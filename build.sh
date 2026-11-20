@@ -1,19 +1,19 @@
 #!/bin/sh
-# Compile Valet Desktop (binaire universel arm64 + x86_64) et assemble build/Valet Desktop.app.
+# Compile PureValet (binaire universel arm64 + x86_64) et assemble build/PureValet.app.
 # Usage : ./build.sh
 set -eu
 cd "$(dirname "$0")"
 
 VERSION="$(cat VERSION)"
 BUILD_NUMBER="${BUILD_NUMBER:-1}"
-APP="build/Valet Desktop.app"
+APP="build/PureValet.app"
 
 swift build -c release --arch arm64 --arch x86_64
-BIN="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/ValetDesktop"
+BIN="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/PureValet"
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BIN" "$APP/Contents/MacOS/ValetDesktop"
+cp "$BIN" "$APP/Contents/MacOS/PureValet"
 cp Resources/AppIcon.icns Resources/MenuBarIcon.png Resources/MenuBarIcon@2x.png "$APP/Contents/Resources/"
 
 cat > "$APP/Contents/Info.plist" <<PLIST
@@ -21,10 +21,10 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleName</key><string>Valet Desktop</string>
-    <key>CFBundleDisplayName</key><string>Valet Desktop</string>
-    <key>CFBundleIdentifier</key><string>dev.aubin.valet-desktop</string>
-    <key>CFBundleExecutable</key><string>ValetDesktop</string>
+    <key>CFBundleName</key><string>PureValet</string>
+    <key>CFBundleDisplayName</key><string>PureValet</string>
+    <key>CFBundleIdentifier</key><string>dev.aubin.purevalet</string>
+    <key>CFBundleExecutable</key><string>PureValet</string>
     <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>${VERSION}</string>

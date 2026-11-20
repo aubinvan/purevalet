@@ -1,5 +1,5 @@
 import XCTest
-@testable import ValetDesktop
+@testable import PureValet
 
 final class ParsingTests: XCTestCase {
     func testParsesValetLinksTable() {

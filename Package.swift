@@ -2,17 +2,17 @@
 import PackageDescription
 
 let package = Package(
-    name: "ValetDesktop",
+    name: "PureValet",
     platforms: [.macOS(.v14)],
     targets: [
         .executableTarget(
-            name: "ValetDesktop",
-            path: "Sources/ValetDesktop"
+            name: "PureValet",
+            path: "Sources/PureValet"
         ),
         .testTarget(
-            name: "ValetDesktopTests",
-            dependencies: ["ValetDesktop"],
-            path: "Tests/ValetDesktopTests"
+            name: "PureValetTests",
+            dependencies: ["PureValet"],
+            path: "Tests/PureValetTests"
         ),
     ]
 )

@@ -22,7 +22,7 @@ jobs:
       - name: Upload DMG
         uses: actions/upload-artifact@v4
         with:
-          name: ValetDesktop-dmg
+          name: PureValet-dmg
           path: |
             build/*.dmg
             build/*.dmg.sha256

@@ -20,7 +20,7 @@ swift test           # unit tests (Valet table parsing, slug)
 Quick visual check without clicking the menu bar:
 
 ```bash
-"build/Valet Desktop.app/Contents/MacOS/ValetDesktop" --snapshot /tmp/valet-snap
+"build/PureValet.app/Contents/MacOS/PureValet" --snapshot /tmp/valet-snap
 ```
 
 This writes one PNG per settings tab (`general.png`, `sites.png`, `proxies.png`, `about.png`). The menu bar menu itself cannot be captured this way.
@@ -29,11 +29,11 @@ This writes one PNG per settings tab (`general.png`, `sites.png`, `proxies.png`,
 
 | File | Role |
 | --- | --- |
-| `Sources/ValetDesktop/App.swift` | Entry point, `MenuBarExtra` (menu style), `--snapshot` mode |
-| `Sources/ValetDesktop/MenuContent.swift` | Native menu bar menu |
-| `Sources/ValetDesktop/SettingsWindow.swift` | Settings window: sidebar + General / Sites / Proxies / About panes |
-| `Sources/ValetDesktop/Shell.swift` | Runs commands with an explicit `PATH` and the `sudo` askpass helper |
-| `Sources/ValetDesktop/ValetModel.swift` | Detection, parsing of Valet's tables, actions |
+| `Sources/PureValet/App.swift` | Entry point, `MenuBarExtra` (menu style), `--snapshot` mode |
+| `Sources/PureValet/MenuContent.swift` | Native menu bar menu |
+| `Sources/PureValet/SettingsWindow.swift` | Settings window: sidebar + General / Sites / Proxies / About panes |
+| `Sources/PureValet/Shell.swift` | Runs commands with an explicit `PATH` and the `sudo` askpass helper |
+| `Sources/PureValet/ValetModel.swift` | Detection, parsing of Valet's tables, actions |
 | `scripts/make-icon.swift` | Builds `AppIcon.icns`, the menu bar template icon and `docs/icon.png` from `Resources/source/logo.png` |
 | `scripts/make-dmg.sh` | Builds the DMG and its SHA-256 |
 
@@ -44,7 +44,7 @@ This writes one PNG per settings tab (`general.png`, `sites.png`, `proxies.png`,
 3. Commit, tag `vX.Y.Z`, push, then:
 
 ```bash
-gh release create vX.Y.Z build/ValetDesktop-X.Y.Z.dmg build/ValetDesktop-X.Y.Z.dmg.sha256 --notes-file <notes>
+gh release create vX.Y.Z build/PureValet-X.Y.Z.dmg build/PureValet-X.Y.Z.dmg.sha256 --notes-file <notes>
 ```
 
 ## Localization

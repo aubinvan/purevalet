@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="docs/icon.png" width="128" alt="Icône Valet Desktop">
+  <img src="docs/icon.png" width="128" alt="Icône PureValet">
 </p>
 
-<h1 align="center">Valet Desktop</h1>
+<h1 align="center">PureValet</h1>
 
 <p align="center">
   Une petite appli macOS native, dans la barre de menus, pour piloter <a href="https://laravel.com/docs/valet">Laravel Valet</a> sans terminal.<br>
@@ -12,10 +12,10 @@
 ---
 
 <p align="center">
-  <img src="docs/screenshot-general.png" width="640" alt="Fenêtre de réglages de Valet Desktop">
+  <img src="docs/screenshot-general.png" width="640" alt="Fenêtre de réglages de PureValet">
 </p>
 
-Valet est l'environnement PHP local le plus léger sur macOS (nginx + dnsmasq + php-fpm, sans Docker ni VM), mais il ne s'utilise qu'en ligne de commande. Valet Desktop met les commandes courantes à un clic, sans rien alourdir :
+Valet est l'environnement PHP local le plus léger sur macOS (nginx + dnsmasq + php-fpm, sans Docker ni VM), mais il ne s'utilise qu'en ligne de commande. PureValet met les commandes courantes à un clic, sans rien alourdir :
 
 - **SwiftUI natif**, DMG d'environ 560 Ko, universel (Apple Silicon + Intel), aucune dépendance.
 - **Rien ne tourne en fond.** Pas de minuteur, pas de démon. L'état est relu à l'ouverture du menu ou de la fenêtre, et après chaque action. Une fois l'appli quittée, il ne reste aucun processus.
@@ -61,14 +61,14 @@ valet install
 
 ## Installation
 
-1. Télécharge `ValetDesktop-x.y.z.dmg` depuis la [dernière version](https://github.com/aubinvan/valet-desktop/releases/latest).
-2. Ouvre-le et glisse **Valet Desktop** dans **Applications**.
+1. Télécharge `PureValet-x.y.z.dmg` depuis la [dernière version](https://github.com/aubinvan/purevalet/releases/latest).
+2. Ouvre-le et glisse **PureValet** dans **Applications**.
 3. Premier lancement : l'appli est signée ad hoc mais **pas notarisée** (pas de compte Apple Developer payant), macOS la bloque donc une fois. Au choix :
    - lance-la, puis **Réglages Système → Confidentialité et sécurité → Ouvrir quand même** ;
    - ou retire l'attribut de quarantaine :
 
 ```bash
-xattr -dr com.apple.quarantine "/Applications/Valet Desktop.app"
+xattr -dr com.apple.quarantine "/Applications/PureValet.app"
 ```
 
 Le logo **V** apparaît dans la barre de menus (pas dans le Dock) ; il est atténué quand Valet est arrêté. Clic pour le menu, **Réglages…** (⌘,) pour la fenêtre complète, **Quitter** (⌘Q) pour tout fermer.
@@ -76,7 +76,7 @@ Le logo **V** apparaît dans la barre de menus (pas dans le Dock) ; il est atté
 Vérifier le téléchargement avec le fichier `.sha256` joint à la version :
 
 ```bash
-shasum -a 256 -c ValetDesktop-x.y.z.dmg.sha256
+shasum -a 256 -c PureValet-x.y.z.dmg.sha256
 ```
 
 ## Mot de passe administrateur (`sudo`)
@@ -90,7 +90,7 @@ Pour ne plus avoir d'invite : `valet trust` (règles sudoers pour `valet` et `br
 Xcode 15.4+ ou les Command Line Tools (Swift 5.10+).
 
 ```bash
-git clone https://github.com/aubinvan/valet-desktop.git && cd valet-desktop
+git clone https://github.com/aubinvan/purevalet.git && cd purevalet
 ```
 
 ```bash
@@ -98,7 +98,7 @@ git clone https://github.com/aubinvan/valet-desktop.git && cd valet-desktop
 ```
 
 ```bash
-open "build/Valet Desktop.app"
+open "build/PureValet.app"
 ```
 
 Créer le DMG (dans `build/`, avec son SHA-256) :

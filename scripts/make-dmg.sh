@@ -1,12 +1,12 @@
 #!/bin/sh
-# Crée build/ValetDesktop-<version>.dmg (appli + raccourci vers /Applications) et son empreinte SHA-256.
+# Crée build/PureValet-<version>.dmg (appli + raccourci vers /Applications) et son empreinte SHA-256.
 # Usage : ./scripts/make-dmg.sh   (reconstruit toujours l'appli avant)
 set -eu
 cd "$(dirname "$0")/.."
 
 VERSION="$(cat VERSION)"
-APP="build/Valet Desktop.app"
-DMG="build/ValetDesktop-${VERSION}.dmg"
+APP="build/PureValet.app"
+DMG="build/PureValet-${VERSION}.dmg"
 
 ./build.sh
 
@@ -16,7 +16,7 @@ cp -R "$APP" "$STAGING/"
 ln -s /Applications "$STAGING/Applications"
 
 rm -f "$DMG"
-hdiutil create -volname "Valet Desktop ${VERSION}" -srcfolder "$STAGING" -ov -format UDZO -fs HFS+ "$DMG" >/dev/null
+hdiutil create -volname "PureValet ${VERSION}" -srcfolder "$STAGING" -ov -format UDZO -fs HFS+ "$DMG" >/dev/null
 codesign --force --sign - "$DMG"
 
 (cd build && shasum -a 256 "$(basename "$DMG")" > "$(basename "$DMG").sha256")

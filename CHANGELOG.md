@@ -3,6 +3,11 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-11-20
+
+### Changed
+- The app is renamed **PureValet** (formerly Valet Desktop): app bundle `PureValet.app`, bundle identifier `dev.aubin.purevalet`, DMG `PureValet-x.y.z.dmg`, repository `aubinvan/purevalet`.
+
 ## [0.2.1] - 2026-11-20
 
 ### Changed

@@ -56,7 +56,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             backing: .buffered,
             defer: false
         )
-        window.title = "Valet Desktop"
+        window.title = "PureValet"
         window.titleVisibility = .visible
         window.toolbarStyle = .unified
         window.isReleasedWhenClosed = false
@@ -237,7 +237,7 @@ struct NotInstalledSection: View {
             Label {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Valet n'est pas installé sur ce Mac").bold()
-                    Text("Aucun binaire `valet` trouvé (Composer global ou Homebrew). Valet Desktop n'installe rien lui-même : lance ces commandes dans un Terminal, puis clique sur Actualiser.")
+                    Text("Aucun binaire `valet` trouvé (Composer global ou Homebrew). PureValet n'installe rien lui-même : lance ces commandes dans un Terminal, puis clique sur Actualiser.")
                         .settingsCaption()
                 }
             } icon: {
@@ -447,7 +447,7 @@ struct AboutPane: View {
                         .resizable()
                         .frame(width: 64, height: 64)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Valet Desktop").font(.title2.bold())
+                        Text("PureValet").font(.title2.bold())
                         Text("Laravel Valet dans la barre de menus").settingsCaption()
                     }
                 }
@@ -461,14 +461,14 @@ struct AboutPane: View {
                     Label("Version", systemImage: "info.circle")
                 }
                 HStack {
-                    Label("Valet Desktop est open source (MIT)", systemImage: "chevron.left.forwardslash.chevron.right")
+                    Label("PureValet est open source (MIT)", systemImage: "chevron.left.forwardslash.chevron.right")
                     Spacer()
-                    Link("Voir sur GitHub", destination: URL(string: "https://github.com/aubinvan/valet-desktop")!)
+                    Link("Voir sur GitHub", destination: URL(string: "https://github.com/aubinvan/purevalet")!)
                 }
                 HStack {
                     Label("Nouvelles versions", systemImage: "arrow.down.circle")
                     Spacer()
-                    Link("Releases", destination: URL(string: "https://github.com/aubinvan/valet-desktop/releases")!)
+                    Link("Releases", destination: URL(string: "https://github.com/aubinvan/purevalet/releases")!)
                 }
             }
 

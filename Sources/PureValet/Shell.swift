@@ -32,11 +32,11 @@ enum Shell {
 
     /// Script askpass écrit dans le dossier temporaire au premier besoin.
     static let askpassPath: String = {
-        let url = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("valet-desktop-askpass.sh")
+        let url = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("purevalet-askpass.sh")
         let script = """
         #!/bin/sh
         exec /usr/bin/osascript \\
-          -e 'set r to display dialog "Valet a besoin des droits administrateur (sudo).\\n\\nMot de passe macOS :" default answer "" with hidden answer with title "Valet Desktop" with icon caution buttons {"Annuler", "OK"} default button "OK" cancel button "Annuler"' \\
+          -e 'set r to display dialog "Valet a besoin des droits administrateur (sudo).\\n\\nMot de passe macOS :" default answer "" with hidden answer with title "PureValet" with icon caution buttons {"Annuler", "OK"} default button "OK" cancel button "Annuler"' \\
           -e 'text returned of r'
         """
         try? script.write(to: url, atomically: true, encoding: .utf8)

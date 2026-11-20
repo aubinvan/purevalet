@@ -2,11 +2,11 @@ import AppKit
 import SwiftUI
 
 @main
-struct ValetDesktopApp: App {
+struct PureValetApp: App {
     @State private var model = ValetModel()
 
     init() {
-        // `ValetDesktop --snapshot <dossier>` : capture la fenêtre de réglages (un PNG par onglet) puis quitte.
+        // `PureValet --snapshot <dossier>` : capture la fenêtre de réglages (un PNG par onglet) puis quitte.
         let args = CommandLine.arguments
         if let i = args.firstIndex(of: "--snapshot"), i + 1 < args.count {
             Snapshot.render(into: URL(fileURLWithPath: args[i + 1]))
