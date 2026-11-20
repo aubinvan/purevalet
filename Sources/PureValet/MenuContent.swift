@@ -5,7 +5,15 @@ struct MenuContent: View {
     @Environment(ValetModel.self) private var model
 
     var body: some View {
-        Text(model.statusText)
+        Button {
+            SettingsWindowController.shared.show(model: model, tab: .general)
+        } label: {
+            Label {
+                Text(model.statusText)
+            } icon: {
+                Image(nsImage: StatusDot.image(model.valetDot))
+            }
+        }
 
         if model.isInstalled || model.mariadbInstalled {
             if model.anyServiceStopped {
@@ -32,7 +40,15 @@ struct MenuContent: View {
                     Text("No sites")
                 }
                 ForEach(model.sites) { site in
-                    Button(model.displayURL(site)) { model.open(site) }
+                    Button {
+                        model.open(site)
+                    } label: {
+                        Label {
+                            Text(verbatim: model.displayURL(site))
+                        } icon: {
+                            Image(nsImage: StatusDot.image(model.dot(for: site)))
+                        }
+                    }
                 }
                 Divider()
                 Button("Link a Folder…") { Task { await model.chooseAndLinkFolder() } }

@@ -3,6 +3,17 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.6.0] - 2026-11-20
+
+### Added
+- Status dots in the menu bar menu: green when Valet runs, red when it is stopped, and one dot per site (green when it answers, red on a server error or no answer). Sites are checked with one HEAD request each, in parallel, when the menu opens.
+- The same dots in *Settings → Sites*.
+- When `valet trust` is not set up, PureValet offers once to enable it (one last password) instead of asking for the password on every action.
+
+### Fixed
+- A refresh requested while another one was running returned immediately, which could show empty or stale lists right after launch or after an action.
+- App Transport Security exception for `.test` and local addresses, needed for the site checks over plain HTTP.
+
 ## [0.5.3] - 2026-11-20
 
 ### Fixed

@@ -163,3 +163,13 @@
 "All releases" = "Toutes les versions";
 "Homebrew users can update with `brew upgrade purevalet`." = "Avec Homebrew, mettez à jour avec `brew upgrade purevalet`.";
 "At most once a day, one request to GitHub. Nothing is downloaded or installed without you." = "Au plus une fois par jour, une seule requête à GitHub. Rien n’est téléchargé ni installé sans vous.";
+
+/* Status dots and trust offer */
+"The site responds" = "Le site répond";
+"The site returns an error or does not respond" = "Le site renvoie une erreur ou ne répond pas";
+"Not checked yet" = "Pas encore vérifié";
+"Stop the password prompts?" = "Ne plus taper votre mot de passe ?";
+"Valet asks for your password on almost every action. PureValet can run `valet trust` once: you type your password one last time, then starting, stopping, HTTPS and the other Valet commands no longer ask for it." = "Valet demande votre mot de passe à presque chaque action. PureValet peut lancer une fois `valet trust` : vous tapez votre mot de passe une dernière fois, puis démarrer, arrêter, HTTPS et les autres commandes Valet ne le demandent plus.";
+"Enable (recommended)" = "Activer (recommandé)";
+"Not now" = "Plus tard";
+"Don't ask again" = "Ne plus demander";

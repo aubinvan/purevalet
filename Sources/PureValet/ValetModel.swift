@@ -79,6 +79,8 @@ final class ValetModel {
     var mariadbInstalled = false
     var mariadbRunning: Bool?
     var yerdDetected = false
+    /// Site name → true when it answers with a non-error HTTP status, false otherwise.
+    var siteHealth: [String: Bool] = [:]
     var launchAtLogin = SMAppService.mainApp.status == .enabled
 
     var busyLabel: String?
@@ -86,7 +88,7 @@ final class ValetModel {
     var lastOutput = ""
     var lastFailed = false
 
-    private var isRefreshing = false
+    private var currentRefresh: Task<Void, Never>?
     private var lastRefresh: Date?
 
     init() {
@@ -214,13 +216,21 @@ final class ValetModel {
 
     // MARK: - Refresh
 
+    /// Refreshes the state. A call made while a refresh is running waits for it instead of returning
+    /// early, so callers (snapshot, actions) always see fresh data.
     func refresh() async {
-        guard !isRefreshing else { return }
-        isRefreshing = true
-        defer {
-            isRefreshing = false
-            lastRefresh = Date()
+        if let running = currentRefresh {
+            await running.value
+            return
         }
+        let task = Task { await performRefresh() }
+        currentRefresh = task
+        await task.value
+        currentRefresh = nil
+        lastRefresh = Date()
+    }
+
+    private func performRefresh() async {
 
         yerdDetected = FileManager.default.isExecutableFile(atPath: "\(Self.home)/.local/bin/yerd")
         let php = Self.scanPHPFormulas()
@@ -276,6 +286,11 @@ final class ValetModel {
             ComponentVersion(name: "MariaDB", version: Self.formulaVersion("mariadb")),
         ]
         mariadbRunning = await mariadb
+        if running == true {
+            await checkSites()
+        } else {
+            siteHealth = [:]
+        }
     }
 
     private static func queryMariaDB() async -> Bool? {
@@ -285,6 +300,49 @@ final class ValetModel {
               let array = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]],
               let first = array.first else { return nil }
         return first["running"] as? Bool
+    }
+
+    // MARK: - Site health
+
+    /// One HEAD request per site, in parallel, 3 s timeout. Only while Valet runs, only on refresh.
+    private func checkSites() async {
+        let targets = sites.compactMap { site in URL(string: displayURL(site)).map { (site.name, $0) } }
+        let session = URLSession(configuration: .ephemeral)
+        defer { session.finishTasksAndInvalidate() }
+        let results = await withTaskGroup(of: (String, Bool).self) { group in
+            for (name, url) in targets {
+                group.addTask {
+                    var request = URLRequest(url: url, timeoutInterval: 3)
+                    request.httpMethod = "HEAD"
+                    guard let response = try? await session.data(for: request).1 as? HTTPURLResponse else {
+                        return (name, false)
+                    }
+                    return (name, Self.isHealthy(statusCode: response.statusCode))
+                }
+            }
+            var health: [String: Bool] = [:]
+            for await (name, ok) in group { health[name] = ok }
+            return health
+        }
+        siteHealth = results
+    }
+
+    /// Any answer below 500 means the site works (redirects to a login page included).
+    nonisolated static func isHealthy(statusCode: Int) -> Bool {
+        (100..<500).contains(statusCode)
+    }
+
+    var valetDot: StatusDot.State {
+        switch install {
+        case .installed: return running == true ? .ok : .down
+        case .notInstalled: return .down
+        case .unknown: return .unknown
+        }
+    }
+
+    func dot(for site: ValetSite) -> StatusDot.State {
+        guard running == true, let ok = siteHealth[site.name] else { return running == true ? .unknown : .down }
+        return ok ? .ok : .down
     }
 
     // MARK: - Parsing Valet output
@@ -373,7 +431,33 @@ final class ValetModel {
             report(label, CommandResult(status: 1, output: String(localized: "Valet is not installed.")))
             return
         }
+        await offerTrustIfNeeded(binary: binary)
         await execute(label) { await Shell.run(binary, args, cwd: cwd, allowSudoPrompt: true) }
+    }
+
+    private static let dontOfferTrustKey = "dontOfferValetTrust"
+
+    /// Without `valet trust`, every Valet action asks for the password. Instead of that, offer once
+    /// to run `valet trust`: one last password, then no more prompts.
+    private func offerTrustIfNeeded(binary: String) async {
+        guard !trusted, !Snapshot.isActive,
+              !UserDefaults.standard.bool(forKey: Self.dontOfferTrustKey) else { return }
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = String(localized: "Stop the password prompts?")
+        alert.informativeText = String(localized: "Valet asks for your password on almost every action. PureValet can run `valet trust` once: you type your password one last time, then starting, stopping, HTTPS and the other Valet commands no longer ask for it.")
+        alert.addButton(withTitle: String(localized: "Enable (recommended)"))
+        alert.addButton(withTitle: String(localized: "Not now"))
+        alert.showsSuppressionButton = true
+        alert.suppressionButton?.title = String(localized: "Don't ask again")
+        let answer = alert.runModal()
+        if alert.suppressionButton?.state == .on {
+            UserDefaults.standard.set(true, forKey: Self.dontOfferTrustKey)
+        }
+        guard answer == .alertFirstButtonReturn else { return }
+        let result = await Shell.run(binary, ["trust"], allowSudoPrompt: true)
+        trusted = FileManager.default.fileExists(atPath: "/etc/sudoers.d/valet")
+        if !result.succeeded { report(String(localized: "Enabling password-free commands"), result) }
     }
 
     private func execute(_ label: String, _ work: () async -> CommandResult) async {

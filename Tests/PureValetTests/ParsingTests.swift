@@ -93,6 +93,14 @@ final class ParsingTests: XCTestCase {
         XCTAssertEqual(ValetModel.userParkedPaths(paths, configDir: "/Users/a/.config/valet"), ["/Users/a/Sites"])
     }
 
+    func testSiteHealthFromStatusCode() {
+        XCTAssertTrue(ValetModel.isHealthy(statusCode: 200))
+        XCTAssertTrue(ValetModel.isHealthy(statusCode: 302))
+        XCTAssertTrue(ValetModel.isHealthy(statusCode: 404))
+        XCTAssertFalse(ValetModel.isHealthy(statusCode: 500))
+        XCTAssertFalse(ValetModel.isHealthy(statusCode: 503))
+    }
+
     func testSlug() {
         XCTAssertEqual(ValetModel.slug("Mon Projet_2"), "mon-projet-2")
     }

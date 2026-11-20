@@ -405,8 +405,18 @@ struct SiteRow: View {
     @Environment(ValetModel.self) private var model
     let site: ValetSite
 
+    private var healthHelp: String {
+        switch model.dot(for: site) {
+        case .ok: return String(localized: "The site responds")
+        case .down: return String(localized: "The site returns an error or does not respond")
+        case .unknown: return String(localized: "Not checked yet")
+        }
+    }
+
     var body: some View {
         HStack(spacing: 10) {
+            Image(nsImage: StatusDot.image(model.dot(for: site)))
+                .help(healthHelp)
             Image(systemName: site.secured ? "lock.fill" : "lock.open")
                 .foregroundStyle(site.secured ? .green : .secondary)
                 .frame(width: 16)
