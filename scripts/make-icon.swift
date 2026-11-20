@@ -1,7 +1,8 @@
 // Generates, from Resources/source/logo.png (transparent background):
 //   - Resources/AppIcon.icns        : app icon (logo on a white rounded square)
 //   - Resources/MenuBarIcon.png/@2x : monochrome template icon for the menu bar
-//   - docs/icon.png                 : icon for the README
+//   - docs/icon.png, docs/icon-dark.png : icons for the README
+//   (the macOS 26+ icon with light/dark/tinted variants is Resources/AppIcon.icon: scripts/make-icon-composer.swift)
 // Usage: swift scripts/make-icon.swift
 import AppKit
 
@@ -49,24 +50,35 @@ func drawLogo(in box: NSRect) {
 
 func png(_ rep: NSBitmapImageRep) -> Data { rep.representation(using: .png, properties: [:])! }
 
-// 1. App icon: white rounded square (Apple grid: 824/1024), subtle gradient and shadow.
-func appIcon(_ size: Int) -> NSBitmapImageRep {
+// 1. App icon: rounded square (Apple grid: 824/1024), subtle gradient and shadow.
+//    Light: white tile. Dark: graphite tile, same green logo (shown when macOS uses dark icons).
+func appIcon(_ size: Int, dark: Bool = false) -> NSBitmapImageRep {
     bitmap(size, size) { rect in
         let s = rect.width
         let tile = NSRect(x: s * 100 / 1024, y: s * 100 / 1024, width: s * 824 / 1024, height: s * 824 / 1024)
         let path = NSBezierPath(roundedRect: tile, xRadius: tile.width * 0.225, yRadius: tile.width * 0.225)
+        let top = dark ? NSColor(white: 0.22, alpha: 1) : NSColor.white
+        let bottom = dark ? NSColor(white: 0.10, alpha: 1) : NSColor(white: 0.93, alpha: 1)
 
         NSGraphicsContext.saveGraphicsState()
         let shadow = NSShadow()
-        shadow.shadowColor = NSColor.black.withAlphaComponent(0.22)
+        shadow.shadowColor = NSColor.black.withAlphaComponent(dark ? 0.45 : 0.22)
         shadow.shadowBlurRadius = s * 0.025
         shadow.shadowOffset = NSSize(width: 0, height: -s * 0.01)
         shadow.set()
-        NSColor.white.setFill()
+        top.setFill()
         path.fill()
         NSGraphicsContext.restoreGraphicsState()
 
-        NSGradient(starting: .white, ending: NSColor(white: 0.93, alpha: 1))!.draw(in: path, angle: -90)
+        NSGradient(starting: top, ending: bottom)!.draw(in: path, angle: -90)
+        if dark {
+            // Thin inner highlight so the tile edge stays visible on dark backgrounds.
+            NSColor(white: 1, alpha: 0.08).setStroke()
+            let edge = NSBezierPath(roundedRect: tile.insetBy(dx: s * 0.002, dy: s * 0.002),
+                                    xRadius: tile.width * 0.225, yRadius: tile.width * 0.225)
+            edge.lineWidth = max(1, s * 0.004)
+            edge.stroke()
+        }
         drawLogo(in: tile.insetBy(dx: tile.width * 0.17, dy: tile.height * 0.17))
     }
 }
@@ -85,6 +97,7 @@ iconutil.arguments = ["-c", "icns", iconset.path, "-o", icns.path]
 try iconutil.run()
 iconutil.waitUntilExit()
 try png(appIcon(256)).write(to: root.appendingPathComponent("docs/icon.png"))
+try png(appIcon(256, dark: true)).write(to: root.appendingPathComponent("docs/icon-dark.png"))
 
 // 2. Menu bar icon: black silhouette (template image), 18 pt high.
 func menuBarIcon(height: Int) -> NSBitmapImageRep {

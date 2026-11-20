@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- **Dark and tinted app icon**: on macOS 26+, the icon follows the system icon appearance (graphite tile in dark mode, tinted mode supported), built from an Icon Composer file (`Resources/AppIcon.icon`). macOS 14–15 keep the light icon.
+- The README logo follows GitHub's light/dark theme.
 - Contribution guidelines, code of conduct, security policy, support guide, issue and pull request templates, CODEOWNERS, EditorConfig.
 - Release workflow: pushing a `vX.Y.Z` tag builds the DMG on GitHub and publishes the release with its changelog section.
 - Dependabot keeps the CI actions up to date.

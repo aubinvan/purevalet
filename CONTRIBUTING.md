@@ -84,7 +84,7 @@ Quit any installed PureValet before running your build: both share the bundle id
 | `Sources/PureValet/StatusDot.swift` | Green/red/grey dots for the menu |
 | `Tests/PureValetTests/` | Unit tests |
 | `Resources/` | Icons and translations |
-| `scripts/` | Icon, DMG, cask, changelog and translation tooling |
+| `scripts/` | Icon (`make-icon.swift`: .icns, menu bar, docs; `make-icon-composer.swift`: `Resources/AppIcon.icon` with light/dark/tinted), DMG, cask, changelog and translation tooling |
 | `.github/` | CI, release workflow, issue/PR templates, Dependabot |
 
 ## Localization

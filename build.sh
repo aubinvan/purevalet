@@ -15,6 +15,19 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/PureValet"
 cp Resources/AppIcon.icns Resources/MenuBarIcon.png Resources/MenuBarIcon@2x.png "$APP/Contents/Resources/"
+# App icon with light, dark and tinted variants (Icon Composer file → Assets.car). Needs Xcode's actool;
+# the .icns above is the fallback (macOS 14–15, or builds with the Command Line Tools only).
+ICON_NAME_KEY=""
+if xcrun --find actool >/dev/null 2>&1 && xcrun actool Resources/AppIcon.icon --compile "$APP/Contents/Resources" \
+        --platform macosx --minimum-deployment-target 14.0 --app-icon AppIcon \
+        --output-partial-info-plist "$(mktemp)" --errors >/dev/null 2>&1 \
+        && [ -f "$APP/Contents/Resources/Assets.car" ]; then
+    ICON_NAME_KEY="<key>CFBundleIconName</key><string>AppIcon</string>"
+else
+    # Older Xcode (Icon Composer files need Xcode 26+) or Command Line Tools only.
+    echo "Note: AppIcon.icon not compiled (needs Xcode 26+ actool): using AppIcon.icns, no dark/tinted variant."
+    cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+fi
 # Localizations: English (development language) and French.
 for lang in en fr; do
     plutil -lint "Resources/$lang.lproj/Localizable.strings" >/dev/null
@@ -34,6 +47,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleIdentifier</key><string>dev.aubin.purevalet</string>
     <key>CFBundleExecutable</key><string>PureValet</string>
     <key>CFBundleIconFile</key><string>AppIcon</string>
+    ${ICON_NAME_KEY}
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>${VERSION}</string>
     <key>CFBundleVersion</key><string>${BUILD_NUMBER}</string>
