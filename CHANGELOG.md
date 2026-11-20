@@ -5,6 +5,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.9.3] - 2026-11-20
+
+### Changed
+- No-admin mode only *requires* what it really needs: the `.test` DNS pointing at PureValet and Valet's certificate authority trusted. Valet's former root services are reported as harmless information (they are no longer used) instead of blocking with a "Finish setup" prompt, so nobody is pushed to use an administrator account for them.
+
 ## [0.9.2] - 2026-11-20
 
 ### Fixed

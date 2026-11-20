@@ -254,7 +254,11 @@ enum RootlessSetup {
         /// Root nginx / PHP-FPM / dnsmasq left running by Valet's former services.
         var leftoverRootProcesses = false
 
-        var ready: Bool { resolverReady && rootServices.isEmpty && caTrusted && !leftoverRootProcesses }
+        /// What rootless mode really needs: the DNS pointing at PureValet and Valet's CA trusted.
+        /// Leftover root services are harmless once the DNS bypasses them: they are reported, never required,
+        /// so nobody is pushed to use an administrator account for them.
+        var ready: Bool { resolverReady && caTrusted }
+        var hasLeftovers: Bool { !rootServices.isEmpty || leftoverRootProcesses }
     }
 
     static func status(files: ValetFiles, formulas: [PHPFormula]) async -> Status {

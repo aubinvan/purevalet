@@ -288,7 +288,7 @@ struct RootlessSection: View {
             Text("Your macOS account is a standard account, so PureValet runs nginx, PHP and dnsmasq itself, under your account: no administrator password, ever. Only this Mac can reach your sites.")
                 .settingsCaption()
             if !model.rootlessSetup.ready {
-                Text("A one-time setup needs an administrator account (macOS asks for its name and password): it points `.\(model.tld)` to PureValet's DNS, removes Valet's root services and trusts Valet's HTTPS certificate authority.")
+                Text("A one-time setup needs an administrator account (macOS asks for its name and password): it points `.\(model.tld)` to PureValet's DNS and trusts Valet's HTTPS certificate authority.")
                     .settingsCaption()
                 if !model.adminAccounts.isEmpty {
                     Label("In the macOS dialog, replace your name with an administrator account: \(model.adminAccounts.joined(separator: ", "))", systemImage: "person.crop.circle.badge.exclamationmark")
@@ -297,15 +297,13 @@ struct RootlessSection: View {
                 if !model.rootlessSetup.resolverReady {
                     Label("The .\(model.tld) DNS still points to Valet's root service", systemImage: "xmark.circle").font(.caption)
                 }
-                if !model.rootlessSetup.rootServices.isEmpty {
-                    Label("Valet's root services are still registered at startup", systemImage: "xmark.circle").font(.caption)
-                }
-                if model.rootlessSetup.leftoverRootProcesses {
-                    Label("Old Valet services still run as root in the background", systemImage: "xmark.circle").font(.caption)
-                }
                 if !model.rootlessSetup.caTrusted {
                     Label("Valet's certificate authority is not trusted yet", systemImage: "xmark.circle").font(.caption)
                 }
+            } else if model.rootlessSetup.hasLeftovers {
+                Label("Valet's former root services are still installed. They are no longer used (DNS goes through PureValet) and need nothing from you; only an administrator could remove them, which is optional.", systemImage: "info.circle")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         } header: {
             Text("Standard account")

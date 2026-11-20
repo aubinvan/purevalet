@@ -196,14 +196,14 @@
 "Finish Setup (Admin, Once)…" = "Terminer la configuration (admin, une fois)…";
 "Setting up the no-admin mode" = "Configuration du mode sans admin";
 "Your macOS account is a standard account, so PureValet runs nginx, PHP and dnsmasq itself, under your account: no administrator password, ever. Only this Mac can reach your sites." = "Votre compte macOS est un compte standard : PureValet lance lui-même nginx, PHP et dnsmasq sous votre compte, sans jamais demander de mot de passe administrateur. Seul ce Mac peut accéder à vos sites.";
-"A one-time setup needs an administrator account (macOS asks for its name and password): it points `.%@` to PureValet's DNS, removes Valet's root services and trusts Valet's HTTPS certificate authority." = "Une configuration unique nécessite un compte administrateur (macOS demande son nom et son mot de passe) : elle dirige `.%@` vers le DNS de PureValet, retire les services root de Valet et approuve l’autorité de certification HTTPS de Valet.";
 "The .%@ DNS still points to Valet's root service" = "Le DNS .%@ pointe encore vers le service root de Valet";
-"Valet's root services are still registered at startup" = "Les services root de Valet sont encore enregistrés au démarrage";
 "Valet's certificate authority is not trusted yet" = "L’autorité de certification de Valet n’est pas encore approuvée";
 "No Homebrew PHP found for the global version." = "Aucun PHP Homebrew trouvé pour la version globale.";
 "The services did not start in time." = "Les services n’ont pas démarré à temps.";
-"Old Valet services still run as root in the background" = "D’anciens services de Valet tournent encore en root en arrière-plan";
 "PureValet needs an administrator account once. Replace the name with an administrator account (not your standard account) and type its password." = "PureValet a besoin d’un compte administrateur une seule fois. Remplacez le nom par celui d’un compte administrateur (pas votre compte standard) et saisissez son mot de passe.";
 "Setup cancelled." = "Configuration annulée.";
 "The administrator name or password was refused. Type the name of an administrator account (not your standard account) and its password." = "Nom ou mot de passe administrateur refusé. Saisissez le nom d’un compte administrateur (pas votre compte standard) et son mot de passe.";
 "In the macOS dialog, replace your name with an administrator account: %@" = "Dans la fenêtre de macOS, remplacez votre nom par un compte administrateur : %@";
+
+"A one-time setup needs an administrator account (macOS asks for its name and password): it points `.%@` to PureValet's DNS and trusts Valet's HTTPS certificate authority." = "Une configuration unique nécessite un compte administrateur (macOS demande son nom et son mot de passe) : elle dirige `.%@` vers le DNS de PureValet et approuve l’autorité de certification HTTPS de Valet.";
+"Valet's former root services are still installed. They are no longer used (DNS goes through PureValet) and need nothing from you; only an administrator could remove them, which is optional." = "Les anciens services root de Valet sont encore installés. Ils ne servent plus (le DNS passe par PureValet) et ne demandent rien de votre part ; seul un administrateur pourrait les retirer, ce qui est facultatif.";
